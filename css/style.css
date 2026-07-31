@@ -387,6 +387,11 @@ button { font-family: inherit; cursor: pointer; }
 }
 .pay2__amountline b { font-family: var(--font-display); font-size: 26px; color: var(--accent); }
 .pay2__hint { font-size: 13.5px; color: var(--muted); margin-bottom: 12px; }
+.pay2__hint--net {
+  display: inline-block; background: var(--bg-alt); border: 1px solid var(--border);
+  border-radius: 100px; padding: 5px 13px; font-size: 12px; margin-bottom: 16px;
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; box-shadow: none; }
 .pay2__purpose {
   font-size: 13px; color: var(--muted); background: var(--bg-alt);
   border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px;

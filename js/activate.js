@@ -18,8 +18,17 @@ fetch('/api/payment-config')
       const banner = document.querySelector('.demo-banner');
       if (banner) { banner.removeAttribute('data-i18n'); banner.textContent = t('act_testnet'); }
     }
+    if (PAYCFG) {
+      const hint = document.getElementById('netHint');
+      hint.textContent = t('act_net_required') + ' ' + netLabel();
+      hint.hidden = false;
+    }
   })
   .catch(() => { PAYCFG = null; });
+
+function netLabel() {
+  return PAYCFG && PAYCFG.network === 'mainnet' ? 'TRON Mainnet' : 'Nile Testnet';
+}
 
 /* ---------- Stepper ---------- */
 function goStep(n) {
@@ -133,6 +142,18 @@ async function waitForProvider(ms) {
 
 function shortAddr(a) { return a.slice(0, 4) + '…' + a.slice(-4); }
 
+/* which TRON network is the wallet's node on? */
+function detectWalletNet(tw) {
+  try {
+    const host = ((tw.fullNode && tw.fullNode.host) || '').toLowerCase();
+    if (host.includes('nile')) return 'nile';
+    if (host.includes('shasta')) return 'shasta';
+    return 'mainnet';
+  } catch { return 'mainnet'; }
+}
+
+let netOk = false;
+
 async function connectInjected() {
   const provider = getTronProvider();
   if (provider && provider.request) {
@@ -150,14 +171,18 @@ async function connectInjected() {
   }
   TWI = tw;
   const addr = tw.defaultAddress.base58;
-  let balance = null;
-  try {
-    const usdt = PAYCFG ? PAYCFG.usdtContract : 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-    const contract = await tw.contract().at(usdt);
-    const raw = await contract.balanceOf(addr).call();
-    balance = (Number(raw.toString()) / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  } catch { /* balance read can fail on some nodes; address alone is enough */ }
-  return { addr, balance };
+  const walletNet = detectWalletNet(tw);
+  let balance = null, trx = null;
+  if (!PAYCFG || walletNet === PAYCFG.network) {
+    try {
+      const usdt = PAYCFG ? PAYCFG.usdtContract : 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+      const contract = await tw.contract().at(usdt);
+      const raw = await contract.balanceOf(addr).call();
+      balance = (Number(raw.toString()) / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } catch { /* balance read can fail on some nodes; address alone is enough */ }
+    try { trx = (await tw.trx.getBalance(addr)) / 1e6; } catch { /* optional */ }
+  }
+  return { addr, balance, walletNet, trx };
 }
 
 function showConnected(name, addr, balance) {
@@ -200,14 +225,16 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
       return;
     }
 
-    // WalletConnect: QR / wallet-list modal (Trust, Binance Web3, Bitget…)
+    // WalletConnect: QR / wallet-list modal — TRON support varies by wallet
     if (name === 'WalletConnect') {
       if (!window.TrivexWC) {
         reset(); showNote(t('act_note_wc_unavailable')); openManual();
         return;
       }
+      showNote(t('act_note_wc_tron')); // which wallets actually sign TRON via WC
       try {
         const addr = await window.TrivexWC.connect(PAYCFG.network);
+        netOk = true; // WC session is opened on the configured chain
         connectedWallet = 'WalletConnect';
         realConnection = true; wcMode = true; wcAddr = addr;
         let balance = null;
@@ -232,10 +259,28 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
 
     if (hasProvider) {
       try {
-        const { addr, balance } = await connectInjected();
+        const { addr, balance, walletNet, trx } = await connectInjected();
         connectedWallet = name;
         realConnection = true;
         showConnected(name, addr, balance);
+
+        const connNote = document.getElementById('connNote');
+        netOk = !PAYCFG || walletNet === PAYCFG.network;
+        if (!netOk) {
+          // wrong network: explain exactly what to switch to and block the pay button
+          connNote.textContent = t('act_wrong_network').replace('{net}', netLabel());
+          connNote.hidden = false;
+          document.getElementById('payBtn').disabled = true;
+        } else {
+          document.getElementById('payBtn').disabled = false;
+          if (trx !== null && trx < 25) {
+            // enough TRX for the network fee is a common gotcha — warn early
+            connNote.textContent = t('act_low_trx');
+            connNote.hidden = false;
+          } else {
+            connNote.hidden = true;
+          }
+        }
       } catch {
         showNote(t('act_note_rejected'));
       } finally {
@@ -299,8 +344,12 @@ async function payReal(btn, status) {
         .send({ feeLimit: 100_000_000 });
     }
   } catch (e) {
-    console.warn('payment:', e && e.message);
-    status.innerHTML = `<span>✕ ${t('act_tx_fail')}</span>`;
+    const msg = String((e && e.message) || e || '');
+    console.warn('payment:', msg);
+    let key = 'act_tx_fail';
+    if (/balance|bandwit?dh|energy|resource|insufficient/i.test(msg)) key = 'act_err_funds';
+    else if (/contract.*(not|does ?n)|not.*contract|REVERT/i.test(msg)) key = 'act_wrong_network_short';
+    status.innerHTML = `<span>✕ ${t(key)}</span>`;
     btn.disabled = false;
     return;
   }
@@ -342,6 +391,12 @@ function payDemo(btn, status) {
 document.getElementById('payBtn').addEventListener('click', () => {
   const btn = document.getElementById('payBtn');
   const status = document.getElementById('payStatus2');
+  if (realConnection && PAYCFG && !netOk) {
+    const n = document.getElementById('connNote');
+    n.textContent = t('act_wrong_network').replace('{net}', netLabel());
+    n.hidden = false;
+    return;
+  }
   btn.disabled = true;
   status.hidden = false;
   if (realConnection && PAYCFG && (wcMode || TWI || getTronWeb())) {
