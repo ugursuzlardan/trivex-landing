@@ -310,6 +310,9 @@ button { font-family: inherit; cursor: pointer; }
   background: rgba(232, 196, 104, .08); border: 1px dashed rgba(232, 196, 104, .4);
   color: var(--gold); font-size: 12.5px; font-weight: 600;
 }
+.demo-banner--live {
+  background: rgba(255, 77, 94, .09); border-color: rgba(255, 77, 94, .45); color: var(--danger);
+}
 
 .flow { padding-bottom: 80px; }
 .flow__title { font-family: var(--font-display); font-size: clamp(22px, 3vw, 32px); text-align: center; margin: 34px 0 10px; }

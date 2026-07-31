@@ -22,9 +22,26 @@ fetch('/api/payment-config')
       const hint = document.getElementById('netHint');
       hint.textContent = t('act_net_required') + ' ' + netLabel();
       hint.hidden = false;
+      if (PAYCFG.mode === 'live') {
+        const banner = document.querySelector('.demo-banner');
+        if (banner) {
+          banner.removeAttribute('data-i18n');
+          banner.textContent = t('act_private_live');
+          banner.classList.add('demo-banner--live');
+        }
+      }
     }
   })
   .catch(() => { PAYCFG = null; });
+
+/* is this wallet allowed to pay during private testing? */
+async function checkCanPay(address) {
+  try {
+    const r = await fetch('/api/can-pay?address=' + encodeURIComponent(address));
+    const d = await r.json();
+    return !!d.allowed;
+  } catch { return false; }
+}
 
 function netLabel() {
   return PAYCFG && PAYCFG.network === 'mainnet' ? 'TRON Mainnet' : 'Nile Testnet';
@@ -271,6 +288,12 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
           connNote.textContent = t('act_wrong_network').replace('{net}', netLabel());
           connNote.hidden = false;
           document.getElementById('payBtn').disabled = true;
+        } else if (!(await checkCanPay(addr))) {
+          // private testing: real funds, so only allowlisted wallets may pay
+          netOk = false;
+          connNote.textContent = t('act_not_allowed');
+          connNote.hidden = false;
+          document.getElementById('payBtn').disabled = true;
         } else {
           document.getElementById('payBtn').disabled = false;
           if (trx !== null && trx < 25) {
@@ -364,6 +387,11 @@ async function payReal(btn, status) {
         status.innerHTML = `<span class="status-ok">✓</span><span>${t('act_confirmed')}</span>`;
         await sleep(1200);
         return issueCard();
+      }
+      if (data.status === 'not_allowed') {
+        status.innerHTML = `<span>✕ ${t('act_not_allowed')}</span>`;
+        btn.disabled = false;
+        return;
       }
       if (data.status === 'underpaid' || data.status === 'already_used') {
         status.innerHTML = `<span>✕ ${t('act_tx_fail')}</span>`;
@@ -462,7 +490,12 @@ document.getElementById('checkTx').addEventListener('click', async () => {
           await sleep(1200);
           return issueCard();
         }
-        if (data.status === 'underpaid' || data.status === 'already_used') {
+        if (data.status === 'not_allowed') {
+        status.innerHTML = `<span>✕ ${t('act_not_allowed')}</span>`;
+        btn.disabled = false;
+        return;
+      }
+      if (data.status === 'underpaid' || data.status === 'already_used') {
           status.innerHTML = `<span>✕ ${t('act_tx_fail')}</span>`;
           btn.disabled = false;
           return;

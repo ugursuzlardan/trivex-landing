@@ -62,6 +62,16 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: false, status: 'underpaid', expected });
   }
 
+  // private testing: only the operator's own wallets may complete an order
+  const open = (process.env.PAYMENTS_OPEN || 'private').toLowerCase() === 'public';
+  if (!open) {
+    const list = (process.env.TRON_PAYER_ALLOWLIST || '')
+      .split(',').map(a => a.trim()).filter(Boolean);
+    if (!list.includes(match.from)) {
+      return res.status(200).json({ ok: false, status: 'not_allowed' });
+    }
+  }
+
   const order = {
     txid: txid.toLowerCase(),
     tier,
