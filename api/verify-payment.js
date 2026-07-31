@@ -1,8 +1,13 @@
 /* Trivex — on-chain payment verification (TRON, USDT TRC-20).
-   Client submits the txid of its signed transfer; we confirm against TronGrid:
-   right contract, right recipient, right amount, confirmed — then record the
-   order in the private Blob store. put() with a fixed pathname refuses to
-   overwrite, which doubles as replay protection (one txid = one order). */
+
+   The client submits the txid of its signed transfer. We fetch that exact
+   transaction and check it ourselves: right contract, right recipient, right
+   amount, succeeded, and buried deep enough to be final. Looking the txid up
+   directly (rather than scanning the receiving account's recent transfers)
+   keeps verification correct once traffic outgrows a single page of history.
+
+   put() with a fixed pathname refuses to overwrite, which doubles as replay
+   protection: one txid can only ever create one order. */
 
 import { put } from '@vercel/blob';
 
@@ -14,6 +19,30 @@ const TIERS = {
 };
 
 const TXID_RE = /^[0-9a-f]{64}$/i;
+const TRANSFER_SELECTOR = 'a9059cbb';
+const MIN_CONFIRMATIONS = 19; // TRON is irreversible past one SR round
+const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+/* base58check → hex payload (41 + 20 bytes), no checksum */
+function base58ToHex(addr) {
+  let num = 0n;
+  for (const ch of addr) {
+    const i = B58.indexOf(ch);
+    if (i < 0) return null;
+    num = num * 58n + BigInt(i);
+  }
+  let hex = num.toString(16);
+  if (hex.length % 2) hex = '0' + hex;
+  return hex.slice(0, -8).toLowerCase(); // strip 4-byte checksum
+}
+
+async function tronPost(base, path, body) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (process.env.TRON_API_KEY) headers['TRON-PRO-API-KEY'] = process.env.TRON_API_KEY;
+  const r = await fetch(`${base}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(`tron_${r.status}`);
+  return r.json();
+}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -31,49 +60,49 @@ export default async function handler(req, res) {
   }
 
   const base = network === 'mainnet' ? 'https://api.trongrid.io' : 'https://nile.trongrid.io';
-  const expected = Math.round((TIERS[tier].price + TIERS[tier].minTopup) * 1e6);
+  const expected = BigInt(Math.round((TIERS[tier].price + TIERS[tier].minTopup) * 1e6));
+  const id = txid.toLowerCase();
 
-  let transfers;
+  let tx, info, now;
   try {
-    const r = await fetch(
-      `${base}/v1/accounts/${address}/transactions/trc20` +
-      `?only_confirmed=true&only_to=true&limit=100&contract_address=${usdtContract}`,
-      { headers: { accept: 'application/json' } }
-    );
-    if (!r.ok) throw new Error(`trongrid_${r.status}`);
-    transfers = (await r.json()).data || [];
+    tx = await tronPost(base, '/wallet/gettransactionbyid', { value: id, visible: true });
   } catch (err) {
-    console.error('trongrid query failed:', err.message);
+    console.error('trongrid tx lookup failed:', err.message);
     return res.status(502).json({ ok: false, error: 'chain_unavailable' });
   }
 
-  const match = transfers.find(t =>
-    t.transaction_id === txid.toLowerCase() &&
-    t.to === address &&
-    (t.type === 'Transfer' || !t.type)
-  );
-
-  if (!match) {
-    // Not among successful transfers. It may still be propagating — or it may
-    // have reverted (no balance / out of energy), which never shows up in the
-    // transfer list. Check the receipt so the client stops waiting for good.
-    try {
-      const infoRes = await fetch(`${base}/wallet/gettransactioninfobyid`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: txid.toLowerCase() })
-      });
-      const info = await infoRes.json();
-      const result = info && info.receipt && info.receipt.result;
-      if (result && result !== 'SUCCESS') {
-        return res.status(200).json({ ok: false, status: 'failed', reason: result });
-      }
-    } catch { /* receipt lookup is best-effort */ }
+  // unknown txid yet — still propagating
+  if (!tx || !tx.raw_data) {
     return res.status(200).json({ ok: true, status: 'pending' });
   }
 
-  if (Number(match.value) < expected) {
-    return res.status(200).json({ ok: false, status: 'underpaid', expected });
+  const ret = (tx.ret && tx.ret[0] && tx.ret[0].contractRet) || '';
+  if (ret && ret !== 'SUCCESS') {
+    return res.status(200).json({ ok: false, status: 'failed', reason: ret });
+  }
+
+  const contract = tx.raw_data.contract && tx.raw_data.contract[0];
+  const val = contract && contract.parameter && contract.parameter.value;
+  if (!val || contract.type !== 'TriggerSmartContract') {
+    return res.status(200).json({ ok: false, status: 'wrong_tx' });
+  }
+  if (val.contract_address !== usdtContract) {
+    return res.status(200).json({ ok: false, status: 'wrong_token' });
+  }
+
+  const data = String(val.data || '').toLowerCase();
+  if (!data.startsWith(TRANSFER_SELECTOR) || data.length < 8 + 128) {
+    return res.status(200).json({ ok: false, status: 'wrong_tx' });
+  }
+  const toHex = data.slice(8 + 64 - 42, 8 + 64);          // last 21 bytes of arg 1
+  const amount = BigInt('0x' + data.slice(8 + 64, 8 + 128));
+  const expectedToHex = base58ToHex(address);
+
+  if (!expectedToHex || toHex !== expectedToHex) {
+    return res.status(200).json({ ok: false, status: 'wrong_recipient' });
+  }
+  if (amount < expected) {
+    return res.status(200).json({ ok: false, status: 'underpaid', expected: expected.toString() });
   }
 
   // private testing: only the operator's own wallets may complete an order
@@ -81,22 +110,45 @@ export default async function handler(req, res) {
   if (!open) {
     const list = (process.env.TRON_PAYER_ALLOWLIST || '')
       .split(',').map(a => a.trim()).filter(Boolean);
-    if (!list.includes(match.from)) {
+    if (!list.includes(val.owner_address)) {
       return res.status(200).json({ ok: false, status: 'not_allowed' });
     }
   }
 
+  // must be mined, successful, and final
+  try {
+    info = await tronPost(base, '/wallet/gettransactioninfobyid', { value: id });
+    now = await tronPost(base, '/wallet/getnowblock', {});
+  } catch (err) {
+    console.error('trongrid receipt lookup failed:', err.message);
+    return res.status(502).json({ ok: false, error: 'chain_unavailable' });
+  }
+
+  if (!info || info.blockNumber === undefined) {
+    return res.status(200).json({ ok: true, status: 'pending' });
+  }
+  const receipt = (info.receipt && info.receipt.result) || '';
+  if (receipt && receipt !== 'SUCCESS') {
+    return res.status(200).json({ ok: false, status: 'failed', reason: receipt });
+  }
+  const head = (now && now.block_header && now.block_header.raw_data &&
+                now.block_header.raw_data.number) || 0;
+  if (head - info.blockNumber < MIN_CONFIRMATIONS) {
+    return res.status(200).json({ ok: true, status: 'pending', confirmations: head - info.blockNumber });
+  }
+
   const order = {
-    txid: txid.toLowerCase(),
+    txid: id,
     tier,
-    from: match.from,
-    amount: match.value,
+    from: val.owner_address,
+    amount: amount.toString(),
     network,
+    block: info.blockNumber,
     at: new Date().toISOString()
   };
 
   try {
-    await put(`orders/${txid.toLowerCase()}.json`, JSON.stringify(order), {
+    await put(`orders/${id}.json`, JSON.stringify(order), {
       access: 'private',
       addRandomSuffix: false,
       contentType: 'application/json'

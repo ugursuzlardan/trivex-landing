@@ -408,6 +408,11 @@ async function payReal(btn, status) {
         btn.disabled = false;
         return;
       }
+      if (data.status === 'wrong_tx' || data.status === 'wrong_token' || data.status === 'wrong_recipient') {
+        status.innerHTML = `<span>✕ ${t('act_err_wrong_tx')}</span>`;
+        btn.disabled = false;
+        return;
+      }
       if (data.status === 'underpaid' || data.status === 'already_used') {
         status.innerHTML = `<span>✕ ${t('act_tx_fail')}</span>`;
         btn.disabled = false;
@@ -513,6 +518,11 @@ document.getElementById('checkTx').addEventListener('click', async () => {
       }
       if (data.status === 'not_allowed') {
         status.innerHTML = `<span>✕ ${t('act_not_allowed')}</span>`;
+        btn.disabled = false;
+        return;
+      }
+      if (data.status === 'wrong_tx' || data.status === 'wrong_token' || data.status === 'wrong_recipient') {
+        status.innerHTML = `<span>✕ ${t('act_err_wrong_tx')}</span>`;
         btn.disabled = false;
         return;
       }
