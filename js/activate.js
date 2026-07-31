@@ -127,9 +127,10 @@ const DEEP_LINKS = {
   'TokenPocket': 'tpdapp://open?params=' + encodeURIComponent(JSON.stringify({ url: SITE_URL }))
 };
 
-let TWI = null;      // active tronWeb instance once connected (injected wallets)
-let wcMode = false;  // connected via WalletConnect
-let wcAddr = null;   // WalletConnect address
+let TWI = null;         // active tronWeb instance once connected (injected wallets)
+let wcMode = false;     // connected via WalletConnect
+let wcAddr = null;      // WalletConnect address
+let walletUsdt = null;  // connected wallet's USDT balance
 
 /* read-only TronWeb for building/broadcasting WC transactions and balance reads */
 function roTronWeb() {
@@ -189,17 +190,18 @@ async function connectInjected() {
   TWI = tw;
   const addr = tw.defaultAddress.base58;
   const walletNet = detectWalletNet(tw);
-  let balance = null, trx = null;
+  let balance = null, balanceNum = null, trx = null;
   if (!PAYCFG || walletNet === PAYCFG.network) {
     try {
       const usdt = PAYCFG ? PAYCFG.usdtContract : 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
       const contract = await tw.contract().at(usdt);
       const raw = await contract.balanceOf(addr).call();
-      balance = (Number(raw.toString()) / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      balanceNum = Number(raw.toString()) / 1e6;
+      balance = balanceNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     } catch { /* balance read can fail on some nodes; address alone is enough */ }
     try { trx = (await tw.trx.getBalance(addr)) / 1e6; } catch { /* optional */ }
   }
-  return { addr, balance, walletNet, trx };
+  return { addr, balance, balanceNum, walletNet, trx };
 }
 
 function showConnected(name, addr, balance) {
@@ -276,9 +278,10 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
 
     if (hasProvider) {
       try {
-        const { addr, balance, walletNet, trx } = await connectInjected();
+        const { addr, balance, balanceNum, walletNet, trx } = await connectInjected();
         connectedWallet = name;
         realConnection = true;
+        walletUsdt = balanceNum;
         showConnected(name, addr, balance);
 
         const connNote = document.getElementById('connNote');
@@ -296,12 +299,18 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
           document.getElementById('payBtn').disabled = true;
         } else {
           document.getElementById('payBtn').disabled = false;
-          if (trx !== null && trx < 25) {
-            // enough TRX for the network fee is a common gotcha — warn early
+          connNote.hidden = true;
+          // catch the two things that silently revert the transfer on-chain
+          if (walletUsdt !== null && walletUsdt < payTotal()) {
+            connNote.textContent = t('act_low_usdt')
+              .replace('{have}', walletUsdt.toFixed(2))
+              .replace('{need}', payTotal());
+            connNote.hidden = false;
+            document.getElementById('payBtn').disabled = true;
+            netOk = false;
+          } else if (trx !== null && trx < 25) {
             connNote.textContent = t('act_low_trx');
             connNote.hidden = false;
-          } else {
-            connNote.hidden = true;
           }
         }
       } catch {
@@ -387,6 +396,12 @@ async function payReal(btn, status) {
         status.innerHTML = `<span class="status-ok">✓</span><span>${t('act_confirmed')}</span>`;
         await sleep(1200);
         return issueCard();
+      }
+      if (data.status === 'failed') {
+        const why = /ENERGY|BANDWIDTH/i.test(data.reason || '') ? 'act_err_energy' : 'act_err_reverted';
+        status.innerHTML = `<span>✕ ${t(why)}</span>`;
+        btn.disabled = false;
+        return;
       }
       if (data.status === 'not_allowed') {
         status.innerHTML = `<span>✕ ${t('act_not_allowed')}</span>`;
@@ -490,7 +505,13 @@ document.getElementById('checkTx').addEventListener('click', async () => {
           await sleep(1200);
           return issueCard();
         }
-        if (data.status === 'not_allowed') {
+        if (data.status === 'failed') {
+        const why = /ENERGY|BANDWIDTH/i.test(data.reason || '') ? 'act_err_energy' : 'act_err_reverted';
+        status.innerHTML = `<span>✕ ${t(why)}</span>`;
+        btn.disabled = false;
+        return;
+      }
+      if (data.status === 'not_allowed') {
         status.innerHTML = `<span>✕ ${t('act_not_allowed')}</span>`;
         btn.disabled = false;
         return;

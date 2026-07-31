@@ -54,7 +54,21 @@ export default async function handler(req, res) {
   );
 
   if (!match) {
-    // not visible/confirmed yet — client keeps polling
+    // Not among successful transfers. It may still be propagating — or it may
+    // have reverted (no balance / out of energy), which never shows up in the
+    // transfer list. Check the receipt so the client stops waiting for good.
+    try {
+      const infoRes = await fetch(`${base}/wallet/gettransactioninfobyid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: txid.toLowerCase() })
+      });
+      const info = await infoRes.json();
+      const result = info && info.receipt && info.receipt.result;
+      if (result && result !== 'SUCCESS') {
+        return res.status(200).json({ ok: false, status: 'failed', reason: result });
+      }
+    } catch { /* receipt lookup is best-effort */ }
     return res.status(200).json({ ok: true, status: 'pending' });
   }
 
