@@ -1,0 +1,237 @@
+/* ============ TRIVEX — shared i18n (UA/EN) ============ */
+
+window.TRIVEX_I18N = {
+  ua: {
+    /* --- nav / landing --- */
+    nav_cards: 'Картки', nav_how: 'Як це працює', nav_banks: 'Банки', nav_faq: 'FAQ', nav_cta: 'Активувати',
+    hero_badge: '⚡ USDT TRC-20 · Без застосунку · 60 секунд',
+    hero_title: 'USDT у гаманці —<br>картка в кишені',
+    hero_sub: 'Підключи свій Web3-гаманець, сплати USDT (TRON) — і розраховуйся карткою будь-де у світі. Перша віртуальна картка — без верифікації.',
+    hero_cta1: 'Активувати картку', hero_cta2: 'Порівняти тарифи',
+    stat_sec: 'сек', stat_1: 'активація картки', stat_2: 'комісія мережі TRC-20', stat_3: 'прихованих комісій', stat_4: 'підтримка',
+    card_tier: 'PLATINUM', card_holder: 'ВЛАСНИК',
+    wallets_title: 'Обери свій гаманець',
+    wallets_sub: 'Trivex працює з будь-яким некастодіальним Web3-гаманцем. Твої кошти — тільки у тебе: ми нічого не зберігаємо.',
+    wallet_other: 'Інший гаманець',
+    wallets_hint: 'Достатньо будь-якого гаманця з підтримкою USDT у мережі TRON (TRC-20)',
+    how_title: 'Як це працює',
+    how_1t: 'Обери тариф', how_1d: 'Lite, Plus, Platinum або Black — залежно від лімітів, які тобі потрібні.',
+    how_2t: 'Підключи гаманець', how_2d: 'Оплата USDT (TRC-20) напряму з гаманця: TronLink, Trust Wallet чи будь-який інший. Комісія мережі ~$1.',
+    how_3t: 'Картка активна', how_3d: 'Реквізити — миттєво. Додай в Apple Pay чи Google Pay і плати будь-де, де приймають Mastercard.',
+    cards_title: 'Обери свою картку',
+    cards_sub: 'Починай без документів. Підвищуй ліміти, коли будеш готовий.',
+    tier_nokyc: 'Без верифікації', tier_popular: 'Найпопулярніша', tier_issue: 'випуск', tier_cta: 'Обрати',
+    t_limit: 'Ліміт', t_month: 'міс', t_topup: 'Поповнення',
+    t_virtual: 'Віртуальна картка', t_online: 'Онлайн-платежі та підписки',
+    t_kyc_light: 'Швидка верифікація (селфі)', t_atm: 'Зняття готівки в банкоматах',
+    t_priority: 'Пріоритетна підтримка', t_metal: 'Металева фізична картка', t_concierge: 'Персональний менеджер',
+    tiers_note: '* Тарифи попередні та можуть змінитися до запуску. Ліміти вищих рівнів відповідно до вимог законодавства України щодо верифікації.',
+    banks_soon: 'Скоро', banks_title: 'Інтеграція з українськими банками',
+    banks_sub: "Ми працюємо над прямим зв'язком із банківськими картками України: поповнення Trivex з monobank та виведення на картку ПриватБанку — без P2P і зайвих кроків. А для Європи — SEPA-перекази.",
+    banks_1: 'Поповнення з monobank', banks_2: 'Виведення на картку ПриватБанк', banks_3: 'SEPA / IBAN для ЄС',
+    sec_title: 'Безпека — за замовчуванням',
+    sec_1t: 'Некастодіальне поповнення', sec_1d: 'Ми не зберігаємо твої кошти. USDT конвертується в момент поповнення картки.',
+    sec_2t: '3-D Secure', sec_2d: 'Кожен онлайн-платіж підтверджується. Картку можна заморозити одним дотиком.',
+    sec_3t: 'Ліцензовані партнери', sec_3d: 'Випуск карток — через регульованих платіжних партнерів у ЄС (PCI DSS).',
+    faq_title: 'Часті запитання',
+    faq_1q: 'Чи потрібна верифікація?',
+    faq_1a: 'Для картки Lite — ні: активація без документів у межах лімітів, дозволених законодавством. Для вищих лімітів (Plus і вище) — швидка верифікація за кілька хвилин.',
+    faq_2q: 'Які мережі підтримуються?',
+    faq_2a: 'Основна мережа — TRON (TRC-20): найдешевша та найшвидша для USDT. Незабаром — Ethereum (ERC-20) для MetaMask, далі BEP-20, Solana, TON.',
+    faq_3q: 'Де працює картка?',
+    faq_3a: 'Будь-де, де приймають Mastercard: онлайн-магазини, підписки (Netflix, Spotify, ChatGPT), реклама, а з Apple Pay / Google Pay — і офлайн.',
+    faq_4q: 'Скільки триває активація?',
+    faq_4a: "Після підтвердження транзакції в мережі TRON (зазвичай 30–60 секунд) реквізити картки з'являються миттєво.",
+    faq_5q: 'Це працює з обмеженнями НБУ?',
+    faq_5a: 'Trivex поповнюється напряму з твого криптогаманця, тому обмеження на quasi-cash операції з гривневих карток тебе не стосуються. Ти витрачаєш власний USDT.',
+    cta_title: 'Готовий витрачати USDT як гроші?',
+    cta_sub: 'Приєднуйся до списку раннього доступу — перші 1000 користувачів отримають Lite назавжди без комісії за випуск.',
+    cta_ph: 'you@email.com', cta_btn: 'Отримати ранній доступ',
+    cta_ok: '✓ Дякуємо! Ми повідомимо тебе про запуск.',
+    footer_tag: 'Картка для твого Web3-гаманця.',
+    footer_legal: 'Trivex не є банком. Платіжні послуги надаються ліцензованими фінансовими партнерами. Криптоактиви пов’язані з ризиками. © 2026 Trivex.',
+
+    /* --- activation flow --- */
+    act_back: '← На головну',
+    act_step1: 'Тариф', act_step2: 'Оплата', act_step3: 'Картка',
+    act_title1: 'Підтверди свій вибір',
+    act_wallet_label: 'Твій гаманець',
+    act_wallet_none: 'Не обрано — будь-який TRC-20 гаманець підійде',
+    act_email_label: 'Email для реквізитів та чеків',
+    act_continue: 'Перейти до оплати',
+    act_pay_title: 'Підключи гаманець і сплати',
+    act_pay_sub: 'Оплата USDT напряму з твого Web3-гаманця — без ручного копіювання адрес. Після підтвердження мережі картка випускається автоматично.',
+    act_amount: 'Сума до сплати', act_addr: 'Адреса активації (TRC-20)',
+    act_copy: 'Копіювати', act_copied: '✓ Скопійовано',
+    act_only_trc: 'Надсилай лише USDT у мережі TRON (TRC-20). Інші мережі призведуть до втрати коштів.',
+    act_waiting: 'Очікуємо транзакцію в мережі TRON…',
+    act_check: 'Я надіслав — перевірити',
+    act_checking: 'Перевіряємо мережу…',
+    act_confirmed: '✓ Платіж підтверджено! Випускаємо картку…',
+    act_timer_label: 'Резервація курсу:',
+    act_choose_wallet: 'Обери гаманець для підключення',
+    act_connect: 'Підключити', act_connecting: 'Підключення…', act_connected: '✓ Гаманець підключено',
+    act_balance: 'Баланс USDT', act_pay: 'Сплатити',
+    act_confirm_wallet: 'Підтверди платіж у своєму гаманці…',
+    act_net_soon: 'Скоро',
+    act_manual_toggle: 'Не можеш підключити гаманець? Надішли USDT вручну →',
+    act_manual_hide: '← Повернутись до оплати з гаманця',
+    w_soon_erc: 'ERC-20 · скоро',
+    act_done_title: 'Твоя картка готова 🎉',
+    act_done_sub: 'Віртуальна картка Mastercard випущена. Додай її в Apple Pay або Google Pay і користуйся вже зараз.',
+    act_card_number: 'Номер картки', act_card_exp: 'Термін', act_card_cvv: 'CVV',
+    act_reveal: 'Показати реквізити', act_hide: 'Приховати',
+    act_to_dash: 'Перейти в кабінет →',
+    act_demo: 'DEMO-режим: це прототип інтерфейсу. Реальні платежі ще не приймаються.',
+    act_includes: 'Включено в тариф',
+    act_first_topup: 'мін. перше поповнення',
+
+    /* --- dashboard --- */
+    dash_nav_card: 'Картка', dash_nav_tx: 'Транзакції', dash_nav_topup: 'Поповнити', dash_nav_settings: 'Налаштування',
+    dash_balance: 'Баланс картки',
+    dash_freeze: 'Заморозити', dash_unfreeze: 'Розморозити', dash_frozen: 'Картку заморожено',
+    dash_details: 'Реквізити', dash_topup: 'Поповнити',
+    dash_limit_title: 'Місячний ліміт',
+    dash_limit_used: 'використано',
+    dash_tx_title: 'Останні транзакції',
+    dash_tx_topup: 'Поповнення USDT (TRC-20)',
+    dash_settings_title: 'Налаштування',
+    dash_set_1: 'Сповіщення про кожен платіж', dash_set_2: 'Онлайн-платежі', dash_set_3: 'Платежі за кордоном',
+    dash_upgrade: 'Підвищити тариф ↗',
+    dash_today: 'Сьогодні', dash_yesterday: 'Вчора'
+  },
+
+  en: {
+    nav_cards: 'Cards', nav_how: 'How it works', nav_banks: 'Banks', nav_faq: 'FAQ', nav_cta: 'Activate',
+    hero_badge: '⚡ USDT TRC-20 · No app needed · 60 seconds',
+    hero_title: 'USDT in your wallet —<br>a card in your pocket',
+    hero_sub: 'Connect your Web3 wallet, pay in USDT (TRON) — and spend with your card anywhere in the world. Your first virtual card requires no verification.',
+    hero_cta1: 'Activate card', hero_cta2: 'Compare plans',
+    stat_sec: 'sec', stat_1: 'card activation', stat_2: 'TRC-20 network fee', stat_3: 'hidden fees', stat_4: 'support',
+    card_tier: 'PLATINUM', card_holder: 'CARDHOLDER',
+    wallets_title: 'Choose your wallet',
+    wallets_sub: 'Trivex works with any non-custodial Web3 wallet. Your funds stay yours — we never hold them.',
+    wallet_other: 'Other wallet',
+    wallets_hint: 'Any wallet that supports USDT on the TRON network (TRC-20) will do',
+    how_title: 'How it works',
+    how_1t: 'Pick a plan', how_1d: 'Lite, Plus, Platinum or Black — depending on the limits you need.',
+    how_2t: 'Connect your wallet', how_2d: 'Pay USDT (TRC-20) straight from your wallet: TronLink, Trust Wallet or any other. Network fee ~$1.',
+    how_3t: 'Card is live', how_3d: 'Card details appear instantly. Add to Apple Pay or Google Pay and spend anywhere Mastercard is accepted.',
+    cards_title: 'Choose your card',
+    cards_sub: 'Start with no documents. Upgrade limits whenever you are ready.',
+    tier_nokyc: 'No verification', tier_popular: 'Most popular', tier_issue: 'issuance', tier_cta: 'Select',
+    t_limit: 'Limit', t_month: 'mo', t_topup: 'Top-up',
+    t_virtual: 'Virtual card', t_online: 'Online payments & subscriptions',
+    t_kyc_light: 'Fast verification (selfie)', t_atm: 'ATM cash withdrawals',
+    t_priority: 'Priority support', t_metal: 'Metal physical card', t_concierge: 'Personal manager',
+    tiers_note: '* Pricing is preliminary and may change before launch. Higher-tier limits follow Ukrainian verification requirements.',
+    banks_soon: 'Coming soon', banks_title: 'Ukrainian bank integration',
+    banks_sub: 'We are building direct rails to Ukrainian bank cards: top up Trivex from monobank and withdraw to a PrivatBank card — no P2P, no extra steps. Plus SEPA transfers for Europe.',
+    banks_1: 'Top-up from monobank', banks_2: 'Withdraw to PrivatBank card', banks_3: 'SEPA / IBAN for the EU',
+    sec_title: 'Security by default',
+    sec_1t: 'Non-custodial top-up', sec_1d: 'We never hold your funds. USDT converts the moment your card is topped up.',
+    sec_2t: '3-D Secure', sec_2d: 'Every online payment is confirmed. Freeze your card with a single tap.',
+    sec_3t: 'Licensed partners', sec_3d: 'Cards are issued through regulated EU payment partners (PCI DSS).',
+    faq_title: 'Frequently asked questions',
+    faq_1q: 'Do I need verification?',
+    faq_1a: 'Not for the Lite card: activation without documents within legally allowed limits. Higher limits (Plus and above) require a quick verification that takes minutes.',
+    faq_2q: 'Which networks are supported?',
+    faq_2a: 'The primary network is TRON (TRC-20): the cheapest and fastest for USDT. Ethereum (ERC-20) for MetaMask is coming soon, then BEP-20, Solana, TON.',
+    faq_3q: 'Where does the card work?',
+    faq_3a: 'Anywhere Mastercard is accepted: online stores, subscriptions (Netflix, Spotify, ChatGPT), ads — and offline with Apple Pay / Google Pay.',
+    faq_4q: 'How long does activation take?',
+    faq_4a: 'Once your TRON transaction confirms (usually 30–60 seconds), your card details appear instantly.',
+    faq_5q: 'Does it work with NBU restrictions?',
+    faq_5a: 'Trivex is topped up directly from your crypto wallet, so quasi-cash restrictions on hryvnia cards do not apply. You spend your own USDT.',
+    cta_title: 'Ready to spend USDT like money?',
+    cta_sub: 'Join the early-access list — the first 1,000 users get Lite with no issuance fee, forever.',
+    cta_ph: 'you@email.com', cta_btn: 'Get early access',
+    cta_ok: '✓ Thanks! We will let you know at launch.',
+    footer_tag: 'The card for your Web3 wallet.',
+    footer_legal: 'Trivex is not a bank. Payment services are provided by licensed financial partners. Crypto assets involve risk. © 2026 Trivex.',
+
+    act_back: '← Back to home',
+    act_step1: 'Plan', act_step2: 'Payment', act_step3: 'Card',
+    act_title1: 'Confirm your choice',
+    act_wallet_label: 'Your wallet',
+    act_wallet_none: 'Not selected — any TRC-20 wallet works',
+    act_email_label: 'Email for card details & receipts',
+    act_continue: 'Continue to payment',
+    act_pay_title: 'Connect your wallet and pay',
+    act_pay_sub: 'Pay USDT directly from your Web3 wallet — no manual address copying. After network confirmation your card is issued automatically.',
+    act_amount: 'Amount due', act_addr: 'Activation address (TRC-20)',
+    act_copy: 'Copy', act_copied: '✓ Copied',
+    act_only_trc: 'Send only USDT on the TRON network (TRC-20). Other networks will result in loss of funds.',
+    act_waiting: 'Waiting for your TRON transaction…',
+    act_check: "I've sent it — check",
+    act_checking: 'Checking the network…',
+    act_confirmed: '✓ Payment confirmed! Issuing your card…',
+    act_timer_label: 'Rate locked for:',
+    act_choose_wallet: 'Choose a wallet to connect',
+    act_connect: 'Connect', act_connecting: 'Connecting…', act_connected: '✓ Wallet connected',
+    act_balance: 'USDT balance', act_pay: 'Pay',
+    act_confirm_wallet: 'Confirm the payment in your wallet…',
+    act_net_soon: 'Soon',
+    act_manual_toggle: "Can't connect a wallet? Send USDT manually →",
+    act_manual_hide: '← Back to wallet payment',
+    w_soon_erc: 'ERC-20 · soon',
+    act_done_title: 'Your card is ready 🎉',
+    act_done_sub: 'Your virtual Mastercard has been issued. Add it to Apple Pay or Google Pay and start spending now.',
+    act_card_number: 'Card number', act_card_exp: 'Expiry', act_card_cvv: 'CVV',
+    act_reveal: 'Reveal details', act_hide: 'Hide',
+    act_to_dash: 'Go to dashboard →',
+    act_demo: 'DEMO mode: this is an interface prototype. Real payments are not accepted yet.',
+    act_includes: 'Included in the plan',
+    act_first_topup: 'min. first top-up',
+
+    dash_nav_card: 'Card', dash_nav_tx: 'Transactions', dash_nav_topup: 'Top up', dash_nav_settings: 'Settings',
+    dash_balance: 'Card balance',
+    dash_freeze: 'Freeze', dash_unfreeze: 'Unfreeze', dash_frozen: 'Card is frozen',
+    dash_details: 'Details', dash_topup: 'Top up',
+    dash_limit_title: 'Monthly limit',
+    dash_limit_used: 'used',
+    dash_tx_title: 'Recent transactions',
+    dash_tx_topup: 'USDT top-up (TRC-20)',
+    dash_settings_title: 'Settings',
+    dash_set_1: 'Notify on every payment', dash_set_2: 'Online payments', dash_set_3: 'International payments',
+    dash_upgrade: 'Upgrade plan ↗',
+    dash_today: 'Today', dash_yesterday: 'Yesterday'
+  }
+};
+
+window.trivexLang = localStorage.getItem('trivex_lang') || 'ua';
+
+window.applyLang = function (lang) {
+  window.trivexLang = lang;
+  localStorage.setItem('trivex_lang', lang);
+  document.documentElement.lang = lang === 'ua' ? 'uk' : 'en';
+  const dict = window.TRIVEX_I18N[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key] !== undefined) el.innerHTML = dict[key];
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const key = el.getAttribute('data-i18n-ph');
+    if (dict[key] !== undefined) el.placeholder = dict[key];
+  });
+  document.querySelectorAll('.lang-switch__opt').forEach(opt => {
+    opt.classList.toggle('is-active', opt.dataset.lang === lang);
+  });
+  document.dispatchEvent(new CustomEvent('langchange', { detail: lang }));
+};
+
+window.t = key => (window.TRIVEX_I18N[window.trivexLang][key] || key);
+
+document.addEventListener('DOMContentLoaded', () => {
+  const sw = document.getElementById('langSwitch');
+  if (sw) sw.addEventListener('click', () => applyLang(window.trivexLang === 'ua' ? 'en' : 'ua'));
+  applyLang(window.trivexLang);
+});
+
+/* Shared tier config */
+window.TRIVEX_TIERS = {
+  lite:     { label: 'LITE',     price: 0,   limit: 2000,   topup: 0.8,  minTopup: 10, cls: 'lite' },
+  plus:     { label: 'PLUS',     price: 15,  limit: 10000,  topup: 0.6,  minTopup: 10, cls: 'plus' },
+  platinum: { label: 'PLATINUM', price: 49,  limit: 50000,  topup: 0.45, minTopup: 10, cls: 'platinum' },
+  black:    { label: 'BLACK',    price: 199, limit: 250000, topup: 0.3,  minTopup: 10, cls: 'black' }
+};

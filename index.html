@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trivex — картка для твого USDT</title>
+  <meta name="description" content="Активуй платіжну картку зі свого Web3-гаманця за 60 секунд. Поповнення USDT TRC-20, без застосунку, перша картка без верифікації.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <header class="nav" id="top">
+    <div class="container nav__inner">
+      <a href="#top" class="nav__logo">TRI<span>VEX</span></a>
+      <nav class="nav__links" id="navLinks">
+        <a href="#cards" data-i18n="nav_cards">Картки</a>
+        <a href="#how" data-i18n="nav_how">Як це працює</a>
+        <a href="#banks" data-i18n="nav_banks">Банки</a>
+        <a href="#faq" data-i18n="nav_faq">FAQ</a>
+      </nav>
+      <div class="nav__actions">
+        <button class="lang-switch" id="langSwitch" aria-label="Switch language">
+          <span class="lang-switch__opt is-active" data-lang="ua">UA</span>
+          <span class="lang-switch__sep">/</span>
+          <span class="lang-switch__opt" data-lang="en">EN</span>
+        </button>
+        <a href="#cards" class="btn btn--primary btn--sm" data-i18n="nav_cta">Активувати</a>
+        <button class="nav__burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <div class="hero__glow hero__glow--1"></div>
+    <div class="hero__glow hero__glow--2"></div>
+    <div class="container hero__inner">
+      <div class="hero__text">
+        <div class="badge" data-i18n="hero_badge">⚡ USDT TRC-20 · Без застосунку · 60 секунд</div>
+        <h1 data-i18n="hero_title">USDT у гаманці —<br>картка в кишені</h1>
+        <p class="hero__sub" data-i18n="hero_sub">Обери картку, надішли USDT (TRON) зі свого Web3-гаманця — і розраховуйся будь-де у світі. Перша віртуальна картка — без верифікації.</p>
+        <div class="hero__cta">
+          <a href="#wallets" class="btn btn--primary" data-i18n="hero_cta1">Активувати картку</a>
+          <a href="#cards" class="btn btn--ghost" data-i18n="hero_cta2">Порівняти тарифи</a>
+        </div>
+        <div class="hero__stats">
+          <div class="stat"><b>60 <span data-i18n="stat_sec">сек</span></b><span data-i18n="stat_1">активація картки</span></div>
+          <div class="stat"><b>~$1</b><span data-i18n="stat_2">комісія мережі TRC-20</span></div>
+          <div class="stat"><b>0</b><span data-i18n="stat_3">прихованих комісій</span></div>
+          <div class="stat"><b>24/7</b><span data-i18n="stat_4">підтримка</span></div>
+        </div>
+      </div>
+
+      <div class="hero__visual">
+        <div class="card3d" id="card3d">
+          <div class="card3d__inner">
+            <div class="card3d__top">
+              <span class="card3d__brand">TRIVEX</span>
+              <span class="card3d__tier" data-i18n="card_tier">PLATINUM</span>
+            </div>
+            <div class="card3d__chip"></div>
+            <div class="card3d__number">5375 &nbsp;41•• &nbsp;•••• &nbsp;7204</div>
+            <div class="card3d__bottom">
+              <div>
+                <span class="card3d__label" data-i18n="card_holder">ВЛАСНИК</span>
+                <span class="card3d__value">WEB3 USER</span>
+              </div>
+              <div>
+                <span class="card3d__label">USDT</span>
+                <span class="card3d__value">TRC-20</span>
+              </div>
+              <div class="card3d__paywave">
+                <svg width="38" height="28" viewBox="0 0 38 28" fill="none"><circle cx="14" cy="14" r="9" fill="#EB001B" opacity=".9"/><circle cx="24" cy="14" r="9" fill="#F79E1B" opacity=".9"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="card3d card3d--back"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== WALLETS ===== -->
+  <section class="section" id="wallets">
+    <div class="container">
+      <h2 class="section__title" data-i18n="wallets_title">Обери свій гаманець</h2>
+      <p class="section__sub" data-i18n="wallets_sub">Trivex працює з будь-яким некастодіальним Web3-гаманцем. Твої кошти — тільки у тебе: ми нічого не зберігаємо.</p>
+      <div class="wallets">
+        <button class="wallet" data-wallet="Trust Wallet"><span class="wallet__icon" style="--wc:#3375BB">TW</span><span>Trust Wallet</span></button>
+        <button class="wallet" data-wallet="TronLink"><span class="wallet__icon" style="--wc:#C23631">TL</span><span>TronLink</span></button>
+        <button class="wallet wallet--soon" data-wallet="MetaMask"><span class="wallet__icon" style="--wc:#E2761B">MM</span><span>MetaMask</span><em class="wallet__soon" data-i18n="w_soon_erc">ERC-20 · скоро</em></button>
+        <button class="wallet" data-wallet="OKX Wallet"><span class="wallet__icon" style="--wc:#0f0f0f;border:1px solid #333">OKX</span><span>OKX Wallet</span></button>
+        <button class="wallet" data-wallet="Binance Web3"><span class="wallet__icon" style="--wc:#F0B90B;color:#000">B</span><span>Binance Web3</span></button>
+        <button class="wallet wallet--other" data-wallet="other"><span class="wallet__icon" style="--wc:#2a2f3d">+</span><span data-i18n="wallet_other">Інший гаманець</span></button>
+      </div>
+      <p class="wallets__hint" data-i18n="wallets_hint">Достатньо будь-якого гаманця з підтримкою USDT у мережі TRON (TRC-20)</p>
+    </div>
+  </section>
+
+  <!-- ===== HOW IT WORKS ===== -->
+  <section class="section section--alt" id="how">
+    <div class="container">
+      <h2 class="section__title" data-i18n="how_title">Як це працює</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step__num">1</div>
+          <h3 data-i18n="how_1t">Обери тариф</h3>
+          <p data-i18n="how_1d">Lite, Plus, Platinum або Black — залежно від лімітів, які тобі потрібні.</p>
+        </div>
+        <div class="step__arrow">→</div>
+        <div class="step">
+          <div class="step__num">2</div>
+          <h3 data-i18n="how_2t">Надішли USDT</h3>
+          <p data-i18n="how_2d">Переказ USDT (TRC-20) з твого гаманця на адресу активації. Комісія мережі ~$1.</p>
+        </div>
+        <div class="step__arrow">→</div>
+        <div class="step">
+          <div class="step__num">3</div>
+          <h3 data-i18n="how_3t">Картка активна</h3>
+          <p data-i18n="how_3d">Реквізити — миттєво. Додай в Apple Pay чи Google Pay і плати будь-де, де приймають Mastercard.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CARDS / TIERS ===== -->
+  <section class="section" id="cards">
+    <div class="container">
+      <h2 class="section__title" data-i18n="cards_title">Обери свою картку</h2>
+      <p class="section__sub" data-i18n="cards_sub">Починай без документів. Підвищуй ліміти, коли будеш готовий.</p>
+
+      <div class="tiers">
+        <!-- LITE -->
+        <div class="tier">
+          <div class="tier__badge tier__badge--nokyc" data-i18n="tier_nokyc">Без верифікації</div>
+          <div class="tier__card tier__card--lite">TRIVEX <b>LITE</b></div>
+          <div class="tier__price">$0 <span data-i18n="tier_issue">випуск</span></div>
+          <ul class="tier__list">
+            <li><span data-i18n="t_limit">Ліміт</span>: $2 000 / <span data-i18n="t_month">міс</span></li>
+            <li><span data-i18n="t_topup">Поповнення</span>: 0.8%</li>
+            <li data-i18n="t_virtual">Віртуальна картка</li>
+            <li data-i18n="t_online">Онлайн-платежі та підписки</li>
+          </ul>
+          <button class="btn btn--ghost btn--full" data-tier="Lite" data-i18n="tier_cta">Обрати</button>
+        </div>
+
+        <!-- PLUS -->
+        <div class="tier">
+          <div class="tier__card tier__card--plus">TRIVEX <b>PLUS</b></div>
+          <div class="tier__price">$15 <span data-i18n="tier_issue">випуск</span></div>
+          <ul class="tier__list">
+            <li><span data-i18n="t_limit">Ліміт</span>: $10 000 / <span data-i18n="t_month">міс</span></li>
+            <li><span data-i18n="t_topup">Поповнення</span>: 0.6%</li>
+            <li>Apple Pay / Google Pay</li>
+            <li data-i18n="t_kyc_light">Швидка верифікація (селфі)</li>
+          </ul>
+          <button class="btn btn--ghost btn--full" data-tier="Plus" data-i18n="tier_cta">Обрати</button>
+        </div>
+
+        <!-- PLATINUM -->
+        <div class="tier tier--featured">
+          <div class="tier__badge" data-i18n="tier_popular">Найпопулярніша</div>
+          <div class="tier__card tier__card--platinum">TRIVEX <b>PLATINUM</b></div>
+          <div class="tier__price">$49 <span data-i18n="tier_issue">випуск</span></div>
+          <ul class="tier__list">
+            <li><span data-i18n="t_limit">Ліміт</span>: $50 000 / <span data-i18n="t_month">міс</span></li>
+            <li><span data-i18n="t_topup">Поповнення</span>: 0.45%</li>
+            <li>Apple Pay / Google Pay</li>
+            <li data-i18n="t_atm">Зняття готівки в банкоматах</li>
+            <li data-i18n="t_priority">Пріоритетна підтримка</li>
+          </ul>
+          <button class="btn btn--primary btn--full" data-tier="Platinum" data-i18n="tier_cta">Обрати</button>
+        </div>
+
+        <!-- BLACK -->
+        <div class="tier">
+          <div class="tier__card tier__card--black">TRIVEX <b>BLACK</b></div>
+          <div class="tier__price">$199 <span data-i18n="tier_issue">випуск</span></div>
+          <ul class="tier__list">
+            <li><span data-i18n="t_limit">Ліміт</span>: $250 000 / <span data-i18n="t_month">міс</span></li>
+            <li><span data-i18n="t_topup">Поповнення</span>: 0.3%</li>
+            <li data-i18n="t_metal">Металева фізична картка</li>
+            <li data-i18n="t_concierge">Персональний менеджер</li>
+          </ul>
+          <button class="btn btn--ghost btn--full" data-tier="Black" data-i18n="tier_cta">Обрати</button>
+        </div>
+      </div>
+      <p class="tiers__note" data-i18n="tiers_note">* Тарифи попередні та можуть змінитися до запуску. Ліміти вищих рівнів відповідно до вимог законодавства України щодо верифікації.</p>
+    </div>
+  </section>
+
+  <!-- ===== BANKS (COMING SOON) ===== -->
+  <section class="section section--alt" id="banks">
+    <div class="container">
+      <div class="banks">
+        <div class="banks__text">
+          <div class="badge badge--soon" data-i18n="banks_soon">Скоро</div>
+          <h2 data-i18n="banks_title">Інтеграція з українськими банками</h2>
+          <p data-i18n="banks_sub">Ми працюємо над прямим зв'язком із банківськими картками України: поповнення Trivex з monobank та виведення на картку ПриватБанку — без P2P і зайвих кроків. А для Європи — SEPA-перекази.</p>
+          <ul class="banks__list">
+            <li data-i18n="banks_1">Поповнення з monobank</li>
+            <li data-i18n="banks_2">Виведення на картку ПриватБанк</li>
+            <li data-i18n="banks_3">SEPA / IBAN для ЄС</li>
+          </ul>
+        </div>
+        <div class="banks__logos">
+          <div class="banklogo banklogo--mono">mono<span>bank</span></div>
+          <div class="banklogo banklogo--privat">Приват<span>Банк</span></div>
+          <div class="banklogo banklogo--sepa">SEPA</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SECURITY ===== -->
+  <section class="section" id="security">
+    <div class="container">
+      <h2 class="section__title" data-i18n="sec_title">Безпека — за замовчуванням</h2>
+      <div class="features">
+        <div class="feature">
+          <div class="feature__icon">🔐</div>
+          <h3 data-i18n="sec_1t">Некастодіальне поповнення</h3>
+          <p data-i18n="sec_1d">Ми не зберігаємо твої кошти. USDT конвертується в момент поповнення картки.</p>
+        </div>
+        <div class="feature">
+          <div class="feature__icon">🛡️</div>
+          <h3 data-i18n="sec_2t">3-D Secure</h3>
+          <p data-i18n="sec_2d">Кожен онлайн-платіж підтверджується. Картку можна заморозити одним дотиком.</p>
+        </div>
+        <div class="feature">
+          <div class="feature__icon">🏦</div>
+          <h3 data-i18n="sec_3t">Ліцензовані партнери</h3>
+          <p data-i18n="sec_3d">Випуск карток — через регульованих платіжних партнерів у ЄС (PCI DSS).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FAQ ===== -->
+  <section class="section section--alt" id="faq">
+    <div class="container container--narrow">
+      <h2 class="section__title" data-i18n="faq_title">Часті запитання</h2>
+      <div class="faq">
+        <details class="faq__item">
+          <summary data-i18n="faq_1q">Чи потрібна верифікація?</summary>
+          <p data-i18n="faq_1a">Для картки Lite — ні: активація без документів у межах лімітів, дозволених законодавством. Для вищих лімітів (Plus і вище) — швидка верифікація за кілька хвилин.</p>
+        </details>
+        <details class="faq__item">
+          <summary data-i18n="faq_2q">Які мережі підтримуються?</summary>
+          <p data-i18n="faq_2a">Основна мережа — TRON (TRC-20): найдешевша та найшвидша для USDT. Підтримка інших мереж (BEP-20, Solana, TON) — у планах.</p>
+        </details>
+        <details class="faq__item">
+          <summary data-i18n="faq_3q">Де працює картка?</summary>
+          <p data-i18n="faq_3a">Будь-де, де приймають Mastercard: онлайн-магазини, підписки (Netflix, Spotify, ChatGPT), реклама, а з Apple Pay / Google Pay — і офлайн.</p>
+        </details>
+        <details class="faq__item">
+          <summary data-i18n="faq_4q">Скільки триває активація?</summary>
+          <p data-i18n="faq_4a">Після підтвердження транзакції в мережі TRON (зазвичай 30–60 секунд) реквізити картки з'являються миттєво.</p>
+        </details>
+        <details class="faq__item">
+          <summary data-i18n="faq_5q">Це працює з обмеженнями НБУ?</summary>
+          <p data-i18n="faq_5a">Trivex поповнюється напряму з твого криптогаманця, тому обмеження на quasi-cash операції з гривневих карток тебе не стосуються. Ти витрачаєш власний USDT.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <section class="section cta-final">
+    <div class="container cta-final__inner">
+      <h2 data-i18n="cta_title">Готовий витрачати USDT як гроші?</h2>
+      <p data-i18n="cta_sub">Приєднуйся до списку раннього доступу — перші 1000 користувачів отримають Lite назавжди без комісії за випуск.</p>
+      <form class="cta-final__form" id="waitlistForm">
+        <input type="email" required placeholder="you@email.com" data-i18n-ph="cta_ph">
+        <button type="submit" class="btn btn--primary" data-i18n="cta_btn">Отримати ранній доступ</button>
+      </form>
+      <p class="cta-final__ok" id="waitlistOk" hidden data-i18n="cta_ok">✓ Дякуємо! Ми повідомимо тебе про запуск.</p>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <div class="nav__logo">TRI<span>VEX</span></div>
+        <p data-i18n="footer_tag">Картка для твого Web3-гаманця.</p>
+      </div>
+      <div class="footer__col">
+        <a href="#cards" data-i18n="nav_cards">Картки</a>
+        <a href="#how" data-i18n="nav_how">Як це працює</a>
+        <a href="#faq" data-i18n="nav_faq">FAQ</a>
+      </div>
+      <div class="footer__col">
+        <a href="mailto:hello@trivex.cards">hello@trivex.cards</a>
+        <a href="#" aria-disabled="true">Telegram</a>
+        <a href="#" aria-disabled="true">X / Twitter</a>
+      </div>
+    </div>
+    <div class="container footer__legal">
+      <p data-i18n="footer_legal">Trivex не є банком. Платіжні послуги надаються ліцензованими фінансовими партнерами. Криптоактиви пов'язані з ризиками. © 2026 Trivex.</p>
+    </div>
+  </footer>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

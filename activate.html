@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trivex — активація картки</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
+</head>
+<body class="page-flow">
+
+  <header class="nav">
+    <div class="container nav__inner">
+      <a href="index.html" class="nav__logo">TRI<span>VEX</span></a>
+      <a href="index.html" class="nav__back" data-i18n="act_back">← На головну</a>
+      <div class="nav__actions">
+        <button class="lang-switch" id="langSwitch" aria-label="Switch language">
+          <span class="lang-switch__opt is-active" data-lang="ua">UA</span>
+          <span class="lang-switch__sep">/</span>
+          <span class="lang-switch__opt" data-lang="en">EN</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flow container">
+    <div class="demo-banner" data-i18n="act_demo">DEMO-режим: це прототип інтерфейсу. Реальні платежі ще не приймаються.</div>
+
+    <!-- Stepper -->
+    <div class="stepper">
+      <div class="stepper__item is-active" data-step-ind="1"><span>1</span><b data-i18n="act_step1">Тариф</b></div>
+      <div class="stepper__line"></div>
+      <div class="stepper__item" data-step-ind="2"><span>2</span><b data-i18n="act_step2">Оплата</b></div>
+      <div class="stepper__line"></div>
+      <div class="stepper__item" data-step-ind="3"><span>3</span><b data-i18n="act_step3">Картка</b></div>
+    </div>
+
+    <!-- STEP 1: confirm plan -->
+    <section class="flow-step is-visible" id="step1">
+      <h1 class="flow__title" data-i18n="act_title1">Підтверди свій вибір</h1>
+
+      <div class="plan-picker" id="planPicker"><!-- js --></div>
+
+      <div class="flow-panel">
+        <div class="flow-row">
+          <div class="flow-field">
+            <label data-i18n="act_wallet_label">Твій гаманець</label>
+            <div class="flow-wallet" id="flowWallet">—</div>
+          </div>
+          <div class="flow-field">
+            <label data-i18n="act_email_label">Email для реквізитів та чеків</label>
+            <input type="email" id="flowEmail" placeholder="you@email.com" required>
+          </div>
+        </div>
+        <div class="flow-summary" id="flowSummary"><!-- js --></div>
+        <button class="btn btn--primary btn--full" id="toPayment" data-i18n="act_continue">Перейти до оплати</button>
+      </div>
+    </section>
+
+    <!-- STEP 2: payment via connected wallet -->
+    <section class="flow-step" id="step2">
+      <h1 class="flow__title" data-i18n="act_pay_title">Підключи гаманець і сплати</h1>
+      <p class="flow__sub" data-i18n="act_pay_sub">Оплата USDT напряму з твого Web3-гаманця — без ручного копіювання адрес. Після підтвердження мережі картка випускається автоматично.</p>
+
+      <div class="pay2">
+        <!-- network tabs -->
+        <div class="net-tabs">
+          <button class="net-tab is-active">TRON · TRC-20</button>
+          <button class="net-tab is-disabled" disabled>Ethereum · ERC-20 <em data-i18n="act_net_soon">Скоро</em></button>
+        </div>
+
+        <div class="pay2__amountline">
+          <span data-i18n="act_amount">Сума до сплати</span>
+          <b><span id="payAmount">—</span> USDT</b>
+        </div>
+
+        <!-- connect -->
+        <div id="connectBox">
+          <p class="pay2__hint" data-i18n="act_choose_wallet">Обери гаманець для підключення</p>
+          <div class="connect-list">
+            <button class="connect-opt" data-cwallet="TronLink"><span class="wallet__icon" style="--wc:#C23631">TL</span>TronLink</button>
+            <button class="connect-opt" data-cwallet="Trust Wallet"><span class="wallet__icon" style="--wc:#3375BB">TW</span>Trust Wallet</button>
+            <button class="connect-opt" data-cwallet="WalletConnect"><span class="wallet__icon" style="--wc:#3B99FC">WC</span>WalletConnect</button>
+          </div>
+        </div>
+
+        <!-- connected -->
+        <div id="connectedBox" hidden>
+          <div class="connected">
+            <div class="connected__row">
+              <span class="connected__ok" data-i18n="act_connected">✓ Гаманець підключено</span>
+              <code id="connAddr">TQrY…zB4t</code>
+            </div>
+            <div class="connected__row connected__row--muted">
+              <span id="connWalletName">TronLink</span>
+              <span><span data-i18n="act_balance">Баланс USDT</span>: <b id="connBalance">2 431.80</b></span>
+            </div>
+          </div>
+          <div class="pay__status" id="payStatus2" hidden>
+            <span class="pulse"></span><span data-i18n="act_confirm_wallet">Підтверди платіж у своєму гаманці…</span>
+          </div>
+          <button class="btn btn--primary btn--full" id="payBtn">—</button>
+        </div>
+
+        <!-- manual fallback toggle -->
+        <button class="pay2__manual-toggle" id="manualToggle" data-i18n="act_manual_toggle">Не можеш підключити гаманець? Надішли USDT вручну →</button>
+
+        <!-- manual fallback -->
+        <div id="manualBox" hidden>
+          <div class="pay pay--manual">
+            <div class="pay__qr">
+              <div class="pay__qrbox" id="qrBox"></div>
+              <div class="pay__timer"><span data-i18n="act_timer_label">Резервація курсу:</span> <b id="payTimer">15:00</b></div>
+            </div>
+            <div class="pay__info">
+              <div class="pay__addr-label" data-i18n="act_addr">Адреса активації (TRC-20)</div>
+              <div class="pay__addr">
+                <code id="payAddr">TQrY8Fk2mXvA5dNw3cJp7uHsE9gRkLzB4t</code>
+                <button class="btn btn--ghost btn--sm" id="copyAddr" data-i18n="act_copy">Копіювати</button>
+              </div>
+              <div class="pay__warn" data-i18n="act_only_trc">Надсилай лише USDT у мережі TRON (TRC-20). Інші мережі призведуть до втрати коштів.</div>
+              <div class="pay__status" id="payStatus">
+                <span class="pulse"></span><span data-i18n="act_waiting">Очікуємо транзакцію в мережі TRON…</span>
+              </div>
+              <button class="btn btn--primary btn--full" id="checkTx" data-i18n="act_check">Я надіслав — перевірити</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3: card ready -->
+    <section class="flow-step" id="step3">
+      <h1 class="flow__title" data-i18n="act_done_title">Твоя картка готова 🎉</h1>
+      <p class="flow__sub" data-i18n="act_done_sub">Віртуальна картка Mastercard випущена. Додай її в Apple Pay або Google Pay і користуйся вже зараз.</p>
+
+      <div class="done">
+        <div class="card3d card3d--static" id="doneCard">
+          <div class="card3d__inner">
+            <div class="card3d__top">
+              <span class="card3d__brand">TRIVEX</span>
+              <span class="card3d__tier" id="doneTier">LITE</span>
+            </div>
+            <div class="card3d__chip"></div>
+            <div class="card3d__number" id="doneNumber">•••• •••• •••• ••••</div>
+            <div class="card3d__bottom">
+              <div><span class="card3d__label" data-i18n="act_card_exp">Термін</span><span class="card3d__value" id="doneExp">••/••</span></div>
+              <div><span class="card3d__label" data-i18n="act_card_cvv">CVV</span><span class="card3d__value" id="doneCvv">•••</span></div>
+              <div class="card3d__paywave">
+                <svg width="38" height="28" viewBox="0 0 38 28" fill="none"><circle cx="14" cy="14" r="9" fill="#EB001B" opacity=".9"/><circle cx="24" cy="14" r="9" fill="#F79E1B" opacity=".9"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="done__actions">
+          <button class="btn btn--ghost" id="revealBtn" data-i18n="act_reveal">Показати реквізити</button>
+          <a class="btn btn--primary" href="dashboard.html" data-i18n="act_to_dash">Перейти в кабінет →</a>
+        </div>
+        <div class="done__pays">
+          <span class="paybadge"> Pay</span>
+          <span class="paybadge">G Pay</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer footer--slim">
+    <div class="container"><p class="footer__legal-inline" data-i18n="footer_legal">Trivex не є банком. © 2026 Trivex.</p></div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/activate.js"></script>
+</body>
+</html>

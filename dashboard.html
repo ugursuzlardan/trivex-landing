@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trivex — кабінет</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
+</head>
+<body class="page-dash">
+
+  <header class="nav">
+    <div class="container nav__inner">
+      <a href="index.html" class="nav__logo">TRI<span>VEX</span></a>
+      <nav class="nav__links nav__links--dash">
+        <a href="#" class="is-current" data-i18n="dash_nav_card">Картка</a>
+        <a href="#tx" data-i18n="dash_nav_tx">Транзакції</a>
+        <a href="#settings" data-i18n="dash_nav_settings">Налаштування</a>
+      </nav>
+      <div class="nav__actions">
+        <button class="lang-switch" id="langSwitch" aria-label="Switch language">
+          <span class="lang-switch__opt is-active" data-lang="ua">UA</span>
+          <span class="lang-switch__sep">/</span>
+          <span class="lang-switch__opt" data-lang="en">EN</span>
+        </button>
+        <div class="avatar">W3</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash container">
+    <div class="demo-banner" data-i18n="act_demo">DEMO-режим: це прототип інтерфейсу. Реальні платежі ще не приймаються.</div>
+
+    <div class="dash__grid">
+      <!-- LEFT: card + balance -->
+      <section class="dash__left">
+        <div class="dash-panel dash-panel--balance">
+          <span class="dash-panel__label" data-i18n="dash_balance">Баланс картки</span>
+          <div class="dash-balance"><b id="dashBalance">1 254.30</b><small>USDT</small></div>
+
+          <div class="card3d card3d--static card3d--dash" id="dashCard">
+            <div class="card3d__inner">
+              <div class="card3d__top">
+                <span class="card3d__brand">TRIVEX</span>
+                <span class="card3d__tier">PLATINUM</span>
+              </div>
+              <div class="card3d__chip"></div>
+              <div class="card3d__number">5375 41•• •••• 7204</div>
+              <div class="card3d__bottom">
+                <div><span class="card3d__label" data-i18n="card_holder">ВЛАСНИК</span><span class="card3d__value">WEB3 USER</span></div>
+                <div class="card3d__paywave">
+                  <svg width="38" height="28" viewBox="0 0 38 28" fill="none"><circle cx="14" cy="14" r="9" fill="#EB001B" opacity=".9"/><circle cx="24" cy="14" r="9" fill="#F79E1B" opacity=".9"/></svg>
+                </div>
+              </div>
+            </div>
+            <div class="card-frozen" id="frozenOverlay" hidden>❄ <span data-i18n="dash_frozen">Картку заморожено</span></div>
+          </div>
+
+          <div class="dash-actions">
+            <button class="btn btn--primary" id="topupBtn" data-i18n="dash_topup">Поповнити</button>
+            <button class="btn btn--ghost" id="freezeBtn" data-i18n="dash_freeze">Заморозити</button>
+            <button class="btn btn--ghost" id="detailsBtn" data-i18n="dash_details">Реквізити</button>
+          </div>
+        </div>
+
+        <div class="dash-panel">
+          <div class="dash-panel__head">
+            <span class="dash-panel__label" data-i18n="dash_limit_title">Місячний ліміт</span>
+            <a href="index.html#cards" class="dash-upgrade" data-i18n="dash_upgrade">Підвищити тариф ↗</a>
+          </div>
+          <div class="limitbar"><div class="limitbar__fill" style="width:8%"></div></div>
+          <div class="limitbar__meta"><span>$3 820 / $50 000</span><span>8% <span data-i18n="dash_limit_used">використано</span></span></div>
+        </div>
+      </section>
+
+      <!-- RIGHT: transactions + settings -->
+      <section class="dash__right">
+        <div class="dash-panel" id="tx">
+          <span class="dash-panel__label" data-i18n="dash_tx_title">Останні транзакції</span>
+          <ul class="txlist" id="txList"><!-- js --></ul>
+        </div>
+
+        <div class="dash-panel" id="settings">
+          <span class="dash-panel__label" data-i18n="dash_settings_title">Налаштування</span>
+          <div class="setting"><span data-i18n="dash_set_1">Сповіщення про кожен платіж</span><label class="toggle"><input type="checkbox" checked><i></i></label></div>
+          <div class="setting"><span data-i18n="dash_set_2">Онлайн-платежі</span><label class="toggle"><input type="checkbox" checked><i></i></label></div>
+          <div class="setting"><span data-i18n="dash_set_3">Платежі за кордоном</span><label class="toggle"><input type="checkbox"><i></i></label></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer footer--slim">
+    <div class="container"><p class="footer__legal-inline" data-i18n="footer_legal">Trivex не є банком. © 2026 Trivex.</p></div>
+  </footer>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
