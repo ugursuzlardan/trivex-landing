@@ -101,7 +101,18 @@ const DEEP_LINKS = {
   'TokenPocket': 'tpdapp://open?params=' + encodeURIComponent(JSON.stringify({ url: SITE_URL }))
 };
 
-let TWI = null; // active tronWeb instance once connected
+let TWI = null;      // active tronWeb instance once connected (injected wallets)
+let wcMode = false;  // connected via WalletConnect
+let wcAddr = null;   // WalletConnect address
+
+/* read-only TronWeb for building/broadcasting WC transactions and balance reads */
+function roTronWeb() {
+  const Ctor = window.TronWeb && (window.TronWeb.TronWeb || window.TronWeb);
+  if (!Ctor) return null;
+  const host = PAYCFG && PAYCFG.network === 'mainnet'
+    ? 'https://api.trongrid.io' : 'https://nile.trongrid.io';
+  return new Ctor({ fullHost: host });
+}
 
 function getTronProvider() {
   if (window.okxwallet && window.okxwallet.tronLink) return window.okxwallet.tronLink;
@@ -189,11 +200,31 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
       return;
     }
 
-    // Trust Wallet cannot sign TRON dApp transactions in-page → manual transfer
-    if (name === 'Trust Wallet') {
-      reset();
-      showNote(t('act_note_trust'));
-      openManual();
+    // WalletConnect: QR / wallet-list modal (Trust, Binance Web3, Bitget…)
+    if (name === 'WalletConnect') {
+      if (!window.TrivexWC) {
+        reset(); showNote(t('act_note_wc_unavailable')); openManual();
+        return;
+      }
+      try {
+        const addr = await window.TrivexWC.connect(PAYCFG.network);
+        connectedWallet = 'WalletConnect';
+        realConnection = true; wcMode = true; wcAddr = addr;
+        let balance = null;
+        try {
+          const tw = roTronWeb();
+          tw.setAddress(addr);
+          const c = await tw.contract().at(PAYCFG.usdtContract);
+          const raw = await c.balanceOf(addr).call();
+          balance = (Number(raw.toString()) / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } catch { /* balance is optional */ }
+        showConnected('WalletConnect', addr, balance);
+      } catch (e) {
+        console.warn('walletconnect:', e && e.message);
+        showNote(t('act_note_rejected'));
+      } finally {
+        reset();
+      }
       return;
     }
 
@@ -238,15 +269,37 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function payReal(btn, status) {
-  const tw = TWI || getTronWeb();
   status.innerHTML = `<span class="pulse"></span><span>${t('act_confirm_wallet')}</span>`;
   let txid;
   try {
-    const contract = await tw.contract().at(PAYCFG.usdtContract);
-    txid = await contract
-      .transfer(PAYCFG.address, Math.round(payTotal() * 1e6))
-      .send({ feeLimit: 100_000_000 });
-  } catch {
+    if (wcMode) {
+      // WalletConnect: build the unsigned transfer, wallet signs, we broadcast
+      const tw = roTronWeb();
+      tw.setAddress(wcAddr);
+      const built = await tw.transactionBuilder.triggerSmartContract(
+        tw.address.toHex(PAYCFG.usdtContract),
+        'transfer(address,uint256)',
+        { feeLimit: 100_000_000, callValue: 0 },
+        [
+          { type: 'address', value: PAYCFG.address },
+          { type: 'uint256', value: Math.round(payTotal() * 1e6) }
+        ],
+        tw.address.toHex(wcAddr)
+      );
+      const signed = await window.TrivexWC.signTransaction(built.transaction);
+      const receipt = await tw.trx.sendRawTransaction(signed);
+      if (receipt && receipt.result === false) throw new Error('broadcast_failed');
+      txid = built.transaction.txID;
+    } else {
+      // injected wallet: contract call signs and broadcasts in one step
+      const tw = TWI || getTronWeb();
+      const contract = await tw.contract().at(PAYCFG.usdtContract);
+      txid = await contract
+        .transfer(PAYCFG.address, Math.round(payTotal() * 1e6))
+        .send({ feeLimit: 100_000_000 });
+    }
+  } catch (e) {
+    console.warn('payment:', e && e.message);
     status.innerHTML = `<span>✕ ${t('act_tx_fail')}</span>`;
     btn.disabled = false;
     return;
@@ -291,7 +344,7 @@ document.getElementById('payBtn').addEventListener('click', () => {
   const status = document.getElementById('payStatus2');
   btn.disabled = true;
   status.hidden = false;
-  if (realConnection && PAYCFG && (TWI || getTronWeb())) {
+  if (realConnection && PAYCFG && (wcMode || TWI || getTronWeb())) {
     payReal(btn, status);
   } else {
     payDemo(btn, status);
