@@ -87,26 +87,62 @@ document.getElementById('toPayment').addEventListener('click', () => {
   startPayment();
 });
 
-/* Connect a wallet — real TronLink when the extension is present, demo otherwise.
-   USDT TRC-20 (TRON) only for now. */
-const USDT_TRC20 = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'; // official USDT contract on TRON
+/* Connect a wallet — real injected TRON provider (TronLink / OKX / TokenPocket
+   extensions and in-wallet dApp browsers). USDT TRC-20 (TRON) only for now.
+   No provider → guide the user (install link / open in wallet app / manual
+   transfer). The fake handshake survives only for the local preview (no API). */
+const sleepC = ms => new Promise(r => setTimeout(r, ms));
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const SITE_URL = 'https://trivex-landing.vercel.app/activate.html';
+
+const DEEP_LINKS = {
+  'TronLink':    'tronlinkoutside://pull.activity?param=' + encodeURIComponent(JSON.stringify({ url: SITE_URL, action: 'open', protocol: 'tronlink', version: '1.0' })),
+  'OKX Wallet':  'okx://wallet/dapp/url?dappUrl=' + encodeURIComponent(SITE_URL),
+  'TokenPocket': 'tpdapp://open?params=' + encodeURIComponent(JSON.stringify({ url: SITE_URL }))
+};
+
+let TWI = null; // active tronWeb instance once connected
+
+function getTronProvider() {
+  if (window.okxwallet && window.okxwallet.tronLink) return window.okxwallet.tronLink;
+  return window.tronLink || null;
+}
+function getTronWeb() {
+  if (window.okxwallet && window.okxwallet.tronWeb) return window.okxwallet.tronWeb;
+  return window.tronWeb || null;
+}
+async function waitForProvider(ms) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    if (getTronProvider() || getTronWeb()) return true;
+    await sleepC(150);
+  }
+  return !!(getTronProvider() || getTronWeb());
+}
 
 function shortAddr(a) { return a.slice(0, 4) + '…' + a.slice(-4); }
 
-async function connectTronLink() {
-  // TronLink injects window.tronLink / window.tronWeb
-  const provider = window.tronLink || null;
-  if (provider) {
+async function connectInjected() {
+  const provider = getTronProvider();
+  if (provider && provider.request) {
     await provider.request({ method: 'tron_requestAccounts' });
   }
-  const tw = window.tronWeb;
-  if (!tw || !tw.defaultAddress || !tw.defaultAddress.base58) {
-    throw new Error('tronlink_unavailable');
+  // address can appear a moment after approval
+  let tw = null;
+  for (let i = 0; i < 20; i++) {
+    tw = getTronWeb();
+    if (tw && tw.defaultAddress && tw.defaultAddress.base58) break;
+    await sleepC(200);
   }
+  if (!tw || !tw.defaultAddress || !tw.defaultAddress.base58) {
+    throw new Error('no_provider');
+  }
+  TWI = tw;
   const addr = tw.defaultAddress.base58;
   let balance = null;
   try {
-    const contract = await tw.contract().at(USDT_TRC20);
+    const usdt = PAYCFG ? PAYCFG.usdtContract : 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+    const contract = await tw.contract().at(usdt);
     const raw = await contract.balanceOf(addr).call();
     balance = (Number(raw.toString()) / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   } catch { /* balance read can fail on some nodes; address alone is enough */ }
@@ -121,36 +157,77 @@ function showConnected(name, addr, balance) {
   document.getElementById('connectedBox').hidden = false;
 }
 
+function showNote(html) {
+  const note = document.getElementById('connectNote');
+  note.innerHTML = html;
+  note.hidden = false;
+}
+
+function openManual() {
+  const box = document.getElementById('manualBox');
+  if (box.hidden) document.getElementById('manualToggle').click();
+}
+
 document.querySelectorAll('.connect-opt').forEach(btn => {
   btn.addEventListener('click', async () => {
     const name = btn.dataset.cwallet;
-    btn.classList.add('is-connecting');
     const label = btn.childNodes[btn.childNodes.length - 1];
     const origLabel = label.textContent;
+    btn.classList.add('is-connecting');
     label.textContent = ' ' + t('act_connecting');
+    document.getElementById('connectNote').hidden = true;
 
-    if (name === 'TronLink' && (window.tronLink || window.tronWeb)) {
-      // real connection: real address + real USDT balance
+    const reset = () => { btn.classList.remove('is-connecting'); label.textContent = origLabel; };
+
+    // local preview without backend → keep the old simulated handshake
+    if (!PAYCFG) {
+      setTimeout(() => {
+        connectedWallet = name; realConnection = false;
+        showConnected(name, DEMO_ADDR, '2,431.80');
+        btn.classList.remove('is-connecting');
+      }, 1300);
+      return;
+    }
+
+    // Trust Wallet cannot sign TRON dApp transactions in-page → manual transfer
+    if (name === 'Trust Wallet') {
+      reset();
+      showNote(t('act_note_trust'));
+      openManual();
+      return;
+    }
+
+    const hasProvider = await waitForProvider(1500);
+
+    if (hasProvider) {
       try {
-        const { addr, balance } = await connectTronLink();
+        const { addr, balance } = await connectInjected();
         connectedWallet = name;
         realConnection = true;
         showConnected(name, addr, balance);
       } catch {
-        label.textContent = origLabel;
+        showNote(t('act_note_rejected'));
       } finally {
         btn.classList.remove('is-connecting');
+        label.textContent = origLabel;
       }
       return;
     }
 
-    // demo handshake for wallets without an injected TRON provider
-    setTimeout(() => {
-      connectedWallet = name;
-      realConnection = false;
-      showConnected(name, 'TQrY8Fk2mXvA5dNw3cJp7uHsE9gRkLzB4t', '2,431.80');
-      btn.classList.remove('is-connecting');
-    }, 1300);
+    // no injected provider
+    reset();
+    if (IS_MOBILE && DEEP_LINKS[name]) {
+      showNote(t('act_note_open_wallet'));
+      location.href = DEEP_LINKS[name];
+      return;
+    }
+    if (name === 'TronLink') {
+      showNote(t('act_note_install_tronlink') +
+        ' <a href="https://www.tronlink.org/" target="_blank" rel="noopener">tronlink.org →</a>');
+      return;
+    }
+    showNote(t('act_note_open_wallet'));
+    openManual();
   });
 });
 
@@ -161,7 +238,7 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function payReal(btn, status) {
-  const tw = window.tronWeb;
+  const tw = TWI || getTronWeb();
   status.innerHTML = `<span class="pulse"></span><span>${t('act_confirm_wallet')}</span>`;
   let txid;
   try {
@@ -214,22 +291,25 @@ document.getElementById('payBtn').addEventListener('click', () => {
   const status = document.getElementById('payStatus2');
   btn.disabled = true;
   status.hidden = false;
-  if (realConnection && PAYCFG && window.tronWeb) {
+  if (realConnection && PAYCFG && (TWI || getTronWeb())) {
     payReal(btn, status);
   } else {
     payDemo(btn, status);
   }
 });
 
-/* Manual fallback (QR + address) */
+/* Manual fallback (QR + address + txid verification) */
+function receivingAddr() { return PAYCFG ? PAYCFG.address : DEMO_ADDR; }
+
 document.getElementById('manualToggle').addEventListener('click', () => {
   const box = document.getElementById('manualBox');
   const open = box.hidden;
   box.hidden = !open;
   document.getElementById('manualToggle').textContent = open ? t('act_manual_hide') : t('act_manual_toggle');
   if (open && !qrDone) {
+    document.getElementById('payAddr').textContent = receivingAddr();
     new QRCode(document.getElementById('qrBox'), {
-      text: DEMO_ADDR, width: 170, height: 170,
+      text: receivingAddr(), width: 170, height: 170,
       colorDark: '#07090f', colorLight: '#ffffff'
     });
     qrDone = true;
@@ -246,15 +326,48 @@ document.getElementById('manualToggle').addEventListener('click', () => {
 });
 
 document.getElementById('copyAddr').addEventListener('click', async e => {
-  await navigator.clipboard.writeText(DEMO_ADDR).catch(() => {});
+  await navigator.clipboard.writeText(receivingAddr()).catch(() => {});
   e.target.textContent = t('act_copied');
   setTimeout(() => { e.target.textContent = t('act_copy'); }, 1800);
 });
 
-document.getElementById('checkTx').addEventListener('click', () => {
+document.getElementById('checkTx').addEventListener('click', async () => {
   const status = document.getElementById('payStatus');
   const btn = document.getElementById('checkTx');
   btn.disabled = true;
+
+  // real mode: verify the pasted txid on-chain
+  if (PAYCFG) {
+    const txid = (document.getElementById('manualTxid').value || '').trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(txid)) {
+      status.innerHTML = `<span>✕ ${t('act_txid_invalid')}</span>`;
+      btn.disabled = false;
+      return;
+    }
+    status.innerHTML = `<span class="pulse"></span><span>${t('act_checking')}</span>`;
+    for (let i = 0; i < 20; i++) {
+      try {
+        const r = await fetch(`/api/verify-payment?txid=${txid}&tier=${tierKey}`);
+        const data = await r.json();
+        if (data.status === 'confirmed') {
+          status.innerHTML = `<span class="status-ok">✓</span><span>${t('act_confirmed')}</span>`;
+          await sleep(1200);
+          return issueCard();
+        }
+        if (data.status === 'underpaid' || data.status === 'already_used') {
+          status.innerHTML = `<span>✕ ${t('act_tx_fail')}</span>`;
+          btn.disabled = false;
+          return;
+        }
+      } catch { /* transient error → keep polling */ }
+      await sleep(3000);
+    }
+    status.innerHTML = `<span>✕ ${t('act_tx_timeout')}</span>`;
+    btn.disabled = false;
+    return;
+  }
+
+  // local preview: simulated confirmation
   status.innerHTML = `<span class="pulse"></span><span>${t('act_checking')}</span>`;
   setTimeout(() => {
     status.innerHTML = `<span class="status-ok">✓</span><span>${t('act_confirmed')}</span>`;
