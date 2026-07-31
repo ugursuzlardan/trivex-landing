@@ -31,11 +31,39 @@ document.querySelectorAll('[data-tier]').forEach(btn => {
   });
 });
 
-/* ---------- Waitlist form (placeholder until backend) ---------- */
-document.getElementById('waitlistForm').addEventListener('submit', e => {
+/* ---------- Waitlist form → /api/waitlist ---------- */
+document.getElementById('waitlistForm').addEventListener('submit', async e => {
   e.preventDefault();
-  document.getElementById('waitlistOk').hidden = false;
-  e.target.querySelector('input').value = '';
+  const form = e.target;
+  const emailInput = form.querySelector('input[type=email]');
+  const btn = form.querySelector('button');
+  const ok = document.getElementById('waitlistOk');
+  const err = document.getElementById('waitlistErr');
+  ok.hidden = true; err.hidden = true;
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: emailInput.value,
+        lang: window.trivexLang,
+        tier: localStorage.getItem('trivex_wallet') || null,
+        website: form.querySelector('[name=website]').value
+      })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok && data.ok) {
+      ok.hidden = false;
+      emailInput.value = '';
+    } else {
+      err.hidden = false;
+    }
+  } catch {
+    err.hidden = false;
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 /* ---------- 3D card tilt ---------- */

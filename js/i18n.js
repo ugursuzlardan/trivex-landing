@@ -48,6 +48,7 @@ window.TRIVEX_I18N = {
     cta_sub: 'Приєднуйся до списку раннього доступу — перші 1000 користувачів отримають Lite назавжди без комісії за випуск.',
     cta_ph: 'you@email.com', cta_btn: 'Отримати ранній доступ',
     cta_ok: '✓ Дякуємо! Ми повідомимо тебе про запуск.',
+    cta_err: 'Щось пішло не так. Спробуй ще раз.',
     footer_tag: 'Картка для твого Web3-гаманця.',
     footer_legal: 'Trivex не є банком. Платіжні послуги надаються ліцензованими фінансовими партнерами. Криптоактиви пов’язані з ризиками. © 2026 Trivex.',
 
@@ -147,6 +148,7 @@ window.TRIVEX_I18N = {
     cta_sub: 'Join the early-access list — the first 1,000 users get Lite with no issuance fee, forever.',
     cta_ph: 'you@email.com', cta_btn: 'Get early access',
     cta_ok: '✓ Thanks! We will let you know at launch.',
+    cta_err: 'Something went wrong. Please try again.',
     footer_tag: 'The card for your Web3 wallet.',
     footer_legal: 'Trivex is not a bank. Payment services are provided by licensed financial partners. Crypto assets involve risk. © 2026 Trivex.',
 

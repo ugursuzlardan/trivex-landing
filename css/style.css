@@ -277,6 +277,8 @@ button { font-family: inherit; cursor: pointer; }
 }
 .cta-final__form input:focus { border-color: var(--accent); }
 .cta-final__ok { margin-top: 18px; color: var(--accent); font-weight: 600; }
+.cta-final__err { margin-top: 18px; color: var(--danger); font-weight: 600; }
+.hp-field { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; opacity: 0; }
 
 /* ---------- Footer ---------- */
 .footer { border-top: 1px solid var(--border); padding: 56px 0 30px; background: var(--bg-alt); }

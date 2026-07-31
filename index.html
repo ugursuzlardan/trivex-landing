@@ -277,9 +277,11 @@
       <p data-i18n="cta_sub">Приєднуйся до списку раннього доступу — перші 1000 користувачів отримають Lite назавжди без комісії за випуск.</p>
       <form class="cta-final__form" id="waitlistForm">
         <input type="email" required placeholder="you@email.com" data-i18n-ph="cta_ph">
+        <input type="text" name="website" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
         <button type="submit" class="btn btn--primary" data-i18n="cta_btn">Отримати ранній доступ</button>
       </form>
       <p class="cta-final__ok" id="waitlistOk" hidden data-i18n="cta_ok">✓ Дякуємо! Ми повідомимо тебе про запуск.</p>
+      <p class="cta-final__err" id="waitlistErr" hidden data-i18n="cta_err">Щось пішло не так. Спробуй ще раз.</p>
     </div>
   </section>
 

@@ -67,20 +67,67 @@ document.getElementById('toPayment').addEventListener('click', () => {
   startPayment();
 });
 
-/* Connect a wallet (demo: fake handshake, mock address/balance) */
+/* Connect a wallet — real TronLink when the extension is present, demo otherwise.
+   USDT TRC-20 (TRON) only for now. */
+const USDT_TRC20 = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'; // official USDT contract on TRON
+
+function shortAddr(a) { return a.slice(0, 4) + '…' + a.slice(-4); }
+
+async function connectTronLink() {
+  // TronLink injects window.tronLink / window.tronWeb
+  const provider = window.tronLink || null;
+  if (provider) {
+    await provider.request({ method: 'tron_requestAccounts' });
+  }
+  const tw = window.tronWeb;
+  if (!tw || !tw.defaultAddress || !tw.defaultAddress.base58) {
+    throw new Error('tronlink_unavailable');
+  }
+  const addr = tw.defaultAddress.base58;
+  let balance = null;
+  try {
+    const contract = await tw.contract().at(USDT_TRC20);
+    const raw = await contract.balanceOf(addr).call();
+    balance = (Number(raw.toString()) / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  } catch { /* balance read can fail on some nodes; address alone is enough */ }
+  return { addr, balance };
+}
+
+function showConnected(name, addr, balance) {
+  document.getElementById('connWalletName').textContent = name;
+  document.getElementById('connAddr').textContent = shortAddr(addr);
+  document.getElementById('connBalance').textContent = balance !== null ? balance : '—';
+  document.getElementById('connectBox').hidden = true;
+  document.getElementById('connectedBox').hidden = false;
+}
+
 document.querySelectorAll('.connect-opt').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
     const name = btn.dataset.cwallet;
     btn.classList.add('is-connecting');
     const label = btn.childNodes[btn.childNodes.length - 1];
+    const origLabel = label.textContent;
     label.textContent = ' ' + t('act_connecting');
+
+    if (name === 'TronLink' && (window.tronLink || window.tronWeb)) {
+      // real connection: real address + real USDT balance (payment stays DEMO)
+      try {
+        const { addr, balance } = await connectTronLink();
+        connectedWallet = name;
+        showConnected(name, addr, balance);
+      } catch {
+        label.textContent = origLabel;
+      } finally {
+        btn.classList.remove('is-connecting');
+      }
+      return;
+    }
+
+    // demo handshake for wallets without an injected TRON provider
     setTimeout(() => {
       connectedWallet = name;
-      document.getElementById('connWalletName').textContent = name;
-      document.getElementById('connAddr').textContent = 'TQrY…zB4t';
-      document.getElementById('connBalance').textContent = '2 431.80';
-      document.getElementById('connectBox').hidden = true;
-      document.getElementById('connectedBox').hidden = false;
+      showConnected(name, 'TQrY8Fk2mXvA5dNw3cJp7uHsE9gRkLzB4t', '2,431.80');
+      btn.classList.remove('is-connecting');
     }, 1300);
   });
 });
