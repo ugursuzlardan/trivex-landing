@@ -7,6 +7,20 @@ if (!TIERS[tierKey]) tierKey = 'platinum';
 
 const DEMO_ADDR = 'TQrY8Fk2mXvA5dNw3cJp7uHsE9gRkLzB4t'; // demo address, not a real wallet
 
+/* Payment config from backend (network, receiving address, USDT contract).
+   Null when the API is unreachable (e.g. local static preview) → demo mode. */
+let PAYCFG = null;
+fetch('/api/payment-config')
+  .then(r => (r.ok ? r.json() : null))
+  .then(cfg => {
+    PAYCFG = cfg && cfg.ok ? cfg : null;
+    if (PAYCFG && PAYCFG.mode === 'testnet') {
+      const banner = document.querySelector('.demo-banner');
+      if (banner) { banner.removeAttribute('data-i18n'); banner.textContent = t('act_testnet'); }
+    }
+  })
+  .catch(() => { PAYCFG = null; });
+
 /* ---------- Stepper ---------- */
 function goStep(n) {
   document.querySelectorAll('.flow-step').forEach(s => s.classList.remove('is-visible'));
@@ -49,11 +63,17 @@ function renderSummary() {
 }
 
 /* ---------- Step 2: wallet-connect payment ---------- */
-let timerId, qrDone = false, connectedWallet = null;
+let timerId, qrDone = false, connectedWallet = null, realConnection = false;
 
 function renderPayAmounts() {
   document.getElementById('payAmount').textContent = payTotal();
   document.getElementById('payBtn').textContent = `${t('act_pay')} ${payTotal()} USDT`;
+  // the user sees exactly what they are paying for before signing
+  const purpose = document.getElementById('payPurpose');
+  if (purpose) {
+    purpose.textContent =
+      `${t('act_purpose')}: Trivex ${TIERS[tierKey].label} — ${t('tier_issue')} + ${t('act_first_topup')} · ${payTotal()} USDT (TRC-20)`;
+  }
 }
 
 function startPayment() {
@@ -110,10 +130,11 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
     label.textContent = ' ' + t('act_connecting');
 
     if (name === 'TronLink' && (window.tronLink || window.tronWeb)) {
-      // real connection: real address + real USDT balance (payment stays DEMO)
+      // real connection: real address + real USDT balance
       try {
         const { addr, balance } = await connectTronLink();
         connectedWallet = name;
+        realConnection = true;
         showConnected(name, addr, balance);
       } catch {
         label.textContent = origLabel;
@@ -126,18 +147,58 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
     // demo handshake for wallets without an injected TRON provider
     setTimeout(() => {
       connectedWallet = name;
+      realConnection = false;
       showConnected(name, 'TQrY8Fk2mXvA5dNw3cJp7uHsE9gRkLzB4t', '2,431.80');
       btn.classList.remove('is-connecting');
     }, 1300);
   });
 });
 
-/* Pay from connected wallet (demo: confirm in wallet → network confirm → issue) */
-document.getElementById('payBtn').addEventListener('click', () => {
-  const btn = document.getElementById('payBtn');
-  const status = document.getElementById('payStatus2');
-  btn.disabled = true;
-  status.hidden = false;
+/* Pay from connected wallet.
+   Real path (TronLink + backend config): sign a genuine USDT TRC-20 transfer,
+   then poll the backend, which verifies it on-chain via TronGrid.
+   Demo path otherwise: simulated confirmation, no funds move. */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function payReal(btn, status) {
+  const tw = window.tronWeb;
+  status.innerHTML = `<span class="pulse"></span><span>${t('act_confirm_wallet')}</span>`;
+  let txid;
+  try {
+    const contract = await tw.contract().at(PAYCFG.usdtContract);
+    txid = await contract
+      .transfer(PAYCFG.address, Math.round(payTotal() * 1e6))
+      .send({ feeLimit: 100_000_000 });
+  } catch {
+    status.innerHTML = `<span>✕ ${t('act_tx_fail')}</span>`;
+    btn.disabled = false;
+    return;
+  }
+
+  status.innerHTML = `<span class="pulse"></span><span>${t('act_checking')}</span>`;
+  for (let i = 0; i < 40; i++) {
+    await sleep(3000);
+    try {
+      const r = await fetch(`/api/verify-payment?txid=${txid}&tier=${tierKey}`);
+      const data = await r.json();
+      if (data.status === 'confirmed') {
+        status.innerHTML = `<span class="status-ok">✓</span><span>${t('act_confirmed')}</span>`;
+        await sleep(1200);
+        return issueCard();
+      }
+      if (data.status === 'underpaid' || data.status === 'already_used') {
+        status.innerHTML = `<span>✕ ${t('act_tx_fail')}</span>`;
+        btn.disabled = false;
+        return;
+      }
+      // 'pending' → keep polling
+    } catch { /* transient network error → keep polling */ }
+  }
+  status.innerHTML = `<span>✕ ${t('act_tx_timeout')}</span>`;
+  btn.disabled = false;
+}
+
+function payDemo(btn, status) {
   status.innerHTML = `<span class="pulse"></span><span>${t('act_confirm_wallet')}</span>`;
   setTimeout(() => {
     status.innerHTML = `<span class="pulse"></span><span>${t('act_checking')}</span>`;
@@ -146,6 +207,18 @@ document.getElementById('payBtn').addEventListener('click', () => {
       setTimeout(issueCard, 1400);
     }, 1800);
   }, 1800);
+}
+
+document.getElementById('payBtn').addEventListener('click', () => {
+  const btn = document.getElementById('payBtn');
+  const status = document.getElementById('payStatus2');
+  btn.disabled = true;
+  status.hidden = false;
+  if (realConnection && PAYCFG && window.tronWeb) {
+    payReal(btn, status);
+  } else {
+    payDemo(btn, status);
+  }
 });
 
 /* Manual fallback (QR + address) */
