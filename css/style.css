@@ -17,13 +17,21 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%; /* iOS: no auto text inflation in landscape */
+  text-size-adjust: 100%;
+}
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
   line-height: 1.6;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+button, a, summary, input, .wallet, .connect-opt {
+  touch-action: manipulation; /* no 300ms delay / accidental double-tap zoom */
 }
 img { max-width: 100%; }
 a { color: inherit; text-decoration: none; }
@@ -64,8 +72,12 @@ button { font-family: inherit; cursor: pointer; }
 /* ---------- Nav ---------- */
 .nav {
   position: sticky; top: 0; z-index: 100;
-  background: rgba(7, 9, 15, .82); backdrop-filter: blur(14px);
+  background: rgba(7, 9, 15, .82);
+  -webkit-backdrop-filter: blur(14px); /* iOS Safari */
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(35, 44, 66, .6);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 .nav__inner { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 20px; }
 .nav__logo {
@@ -557,12 +569,26 @@ button { font-family: inherit; cursor: pointer; }
     display: flex; position: static; flex-direction: row; background: none;
     border: none; padding: 0; gap: 14px; font-size: 13px;
   }
-  .nav__burger { display: flex; }
+  .nav__burger { display: flex; padding: 12px 8px; margin: -6px 0; } /* ≥44px touch target */
   .nav__actions .btn { display: none; }
-  .hero { padding: 60px 0 50px; }
+  .hero { padding: 56px 0 46px; }
+  .hero__stats { gap: 20px 28px; }
+  .hero__cta .btn { flex: 1; min-width: 150px; }
   .steps { flex-direction: column; align-items: center; }
   .step { max-width: 100%; width: 100%; }
   .step__arrow { transform: rotate(90deg); }
   .tiers { grid-template-columns: 1fr; }
   .section { padding: 64px 0; }
+  .wallets { grid-template-columns: repeat(2, 1fr); }
+  /* iOS zooms the page when a focused input is <16px — keep inputs at 16px */
+  .cta-final__form input, .flow-field input, .manual-txid { font-size: 16px; }
+  .cta-final__form input { max-width: 100%; }
+  .flow-panel, .pay2 { padding: 22px 18px; }
+  .pay--manual { padding: 16px; }
+  .stepper { gap: 9px; }
+  .stepper__line { width: 26px; }
+  .stepper__item { font-size: 13px; }
+  .plan-picker { gap: 9px; }
+  .dash-actions .btn { min-width: 100%; }
+  .footer { padding-bottom: calc(30px + env(safe-area-inset-bottom)); }
 }
