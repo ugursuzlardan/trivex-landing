@@ -33,7 +33,34 @@
     return adapter;
   }
 
+  /* WalletConnect sessions carry the wallet's own deep link. After a request
+     is sent the browser must bring that app to the foreground, otherwise the
+     approval screen sits unseen inside the wallet. */
+  function sessionRedirect() {
+    try {
+      const w = adapter && adapter._wallet;
+      const sessions = [];
+      if (w) {
+        if (w.session) sessions.push(w.session);
+        if (w.signer && w.signer.session) sessions.push(w.signer.session);
+        if (w.client && w.client.session && typeof w.client.session.getAll === 'function') {
+          sessions.push(...w.client.session.getAll());
+        }
+      }
+      for (const s of sessions) {
+        const r = s && s.peer && s.peer.metadata && s.peer.metadata.redirect;
+        if (r && (r.native || r.universal)) return r;
+      }
+    } catch { /* metadata is optional */ }
+    return null;
+  }
+
   window.TrivexWC = {
+    /* deep link that reopens the connected wallet app */
+    walletLink() {
+      const r = sessionRedirect();
+      return r ? (r.native || r.universal) : null;
+    },
     /* opens the WalletConnect modal (QR / wallet list); resolves to the
        connected TRON address */
     async connect(network) {

@@ -468,7 +468,8 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 12.5px; color: var(--danger); background: rgba(255, 77, 94, .07);
   border: 1px solid rgba(255, 77, 94, .25); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px;
 }
-.pay__status { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); margin-bottom: 16px; }
+.pay__status { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); margin-bottom: 16px; flex-wrap: wrap; }
+.openwallet { margin-left: auto; border-color: var(--accent); color: var(--accent); }
 .pulse {
   width: 10px; height: 10px; border-radius: 50%; background: var(--gold);
   animation: pulse 1.2s infinite;

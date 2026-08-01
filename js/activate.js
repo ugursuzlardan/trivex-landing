@@ -204,8 +204,42 @@ document.getElementById('toPayment').addEventListener('click', () => {
    No provider → guide the user (install link / open in wallet app / manual
    transfer). The fake handshake survives only for the local preview (no API). */
 const sleepC = ms => new Promise(r => setTimeout(r, ms));
-const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+let IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const SITE_URL = 'https://trivex-landing.vercel.app/activate.html';
+
+/* Fallbacks for reopening a wallet app when the session carries no redirect */
+const WALLET_APP_LINKS = {
+  'Trust Wallet': 'trust://',
+  'Binance Wallet': 'bnc://',
+  'OKX Wallet': 'okx://',
+  'TokenPocket': 'tpoutside://',
+  'Bitget Wallet': 'bitkeep://'
+};
+
+/* Bring the connected wallet to the foreground so the customer actually sees
+   the pending approval. Only meaningful for remote signers on mobile. */
+function openWalletApp() {
+  if (!IS_MOBILE || !wcMode) return;
+  let link = null;
+  try { link = SIGNER && SIGNER.walletLink ? SIGNER.walletLink() : null; } catch { /* optional */ }
+  link = link || WALLET_APP_LINKS[connectedWallet] || null;
+  if (!link) return;
+  try { window.location.href = link; } catch { /* browser may block it */ }
+}
+
+/* Status line plus a manual "open wallet" button, because iOS often blocks a
+   programmatic app switch that is not tied to a tap. */
+function pendingStatus(status, key) {
+  status.innerHTML = `<span class="pulse"></span><span>${t(key)}</span>`;
+  if (IS_MOBILE && wcMode) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn btn--ghost btn--sm openwallet';
+    b.textContent = t('act_open_wallet_btn');
+    b.addEventListener('click', openWalletApp);
+    status.appendChild(b);
+  }
+}
 
 const DEEP_LINKS = {
   'TronLink':    'tronlinkoutside://pull.activity?param=' + encodeURIComponent(JSON.stringify({ url: SITE_URL, action: 'open', protocol: 'tronlink', version: '1.0' })),
@@ -560,11 +594,14 @@ function buildTermsMessage(orderRef) {
 async function signTerms(status) {
   const orderRef = String(Math.floor(100000 + Math.random() * 899999));
   const message = buildTermsMessage(orderRef);
-  status.innerHTML = `<span class="pulse"></span><span>${t('act_sign_terms')}</span>`;
+  pendingStatus(status, 'act_sign_terms');
 
   let signature;
   if (wcMode) {
-    signature = await SIGNER.signMessage(message);
+    // fire the request first, then jump to the wallet so the prompt is visible
+    const pending = SIGNER.signMessage(message);
+    openWalletApp();
+    signature = await pending;
   } else {
     const tw = TWI || getTronWeb();
     signature = await tw.trx.signMessageV2(message);
@@ -595,18 +632,22 @@ async function payReal(btn, status) {
     return;
   }
 
-  status.innerHTML = `<span class="pulse"></span><span>${t('act_confirm_wallet')}</span>`;
+  pendingStatus(status, 'act_confirm_wallet');
   try {
     if (isEvm()) {
       // EVM: the wallet builds, signs and broadcasts; we only supply calldata
-      txid = await SIGNER.sendTransfer();
+      const pending = SIGNER.sendTransfer();
+      openWalletApp();
+      txid = await pending;
       if (!txid) throw new Error('not_signed');
     } else if (wcMode) {
       // WalletConnect: backend builds it, the wallet signs, backend broadcasts
       const built = await apiTron('build', { body: { from: wcAddr, tier: tierKey } });
       if (!built || !built.ok) throw new Error(built && built.error || 'build_failed');
 
-      const signed = await SIGNER.signTransaction(built.transaction);
+      const pending = SIGNER.signTransaction(built.transaction);
+      openWalletApp();
+      const signed = await pending;
       if (!signed || !signed.signature) throw new Error('not_signed');
 
       const sent = await apiTron('broadcast', { body: { transaction: signed } });

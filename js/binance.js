@@ -32,6 +32,8 @@
       if (!adapter.address) throw new Error('binance_no_address');
       return adapter.address;
     },
+    /* deep link used to bring the Binance app forward for an approval */
+    walletLink() { return 'bnc://'; },
     async signTransaction(unsignedTx) {
       if (!adapter) throw new Error('binance_not_connected');
       return adapter.signTransaction(unsignedTx);
