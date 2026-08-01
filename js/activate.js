@@ -132,13 +132,15 @@ let wcMode = false;     // connected via WalletConnect
 let wcAddr = null;      // WalletConnect address
 let walletUsdt = null;  // connected wallet's USDT balance
 
-/* read-only TronWeb for building/broadcasting WC transactions and balance reads */
-function roTronWeb() {
-  const Ctor = window.TronWeb && (window.TronWeb.TronWeb || window.TronWeb);
-  if (!Ctor) return null;
-  const host = PAYCFG && PAYCFG.network === 'mainnet'
-    ? 'https://api.trongrid.io' : 'https://nile.trongrid.io';
-  return new Ctor({ fullHost: host });
+/* Chain work for WalletConnect wallets runs on the backend: TronWeb's browser
+   dist needs Node's Buffer, so building/broadcasting here would fail. */
+async function apiTron(action, opts = {}) {
+  const url = '/api/tron-tx?action=' + action + (opts.query || '');
+  const init = opts.body
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(opts.body) }
+    : {};
+  const r = await fetch(url, init);
+  return r.json();
 }
 
 function getTronProvider() {
@@ -256,15 +258,31 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
         netOk = true; // WC session is opened on the configured chain
         connectedWallet = 'WalletConnect';
         realConnection = true; wcMode = true; wcAddr = addr;
+
         let balance = null;
-        try {
-          const tw = roTronWeb();
-          tw.setAddress(addr);
-          const c = await tw.contract().at(PAYCFG.usdtContract);
-          const raw = await c.balanceOf(addr).call();
-          balance = (Number(raw.toString()) / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        } catch { /* balance is optional */ }
+        const bal = await apiTron('balance', { query: '&address=' + encodeURIComponent(addr) })
+          .catch(() => null);
+        if (bal && bal.ok) {
+          walletUsdt = bal.usdt;
+          balance = bal.usdt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
         showConnected('WalletConnect', addr, balance);
+
+        // same pre-flight checks as injected wallets
+        const note = document.getElementById('connNote');
+        note.hidden = true;
+        document.getElementById('payBtn').disabled = false;
+        if (bal && bal.ok && bal.usdt < payTotal()) {
+          note.textContent = t('act_low_usdt')
+            .replace('{have}', bal.usdt.toFixed(2))
+            .replace('{need}', payTotal());
+          note.hidden = false;
+          document.getElementById('payBtn').disabled = true;
+          netOk = false;
+        } else if (bal && bal.ok && bal.trx < 25) {
+          note.textContent = t('act_low_trx');
+          note.hidden = false;
+        }
       } catch (e) {
         console.warn('walletconnect:', e && e.message);
         showNote(t('act_note_rejected'));
@@ -350,23 +368,16 @@ async function payReal(btn, status) {
   let txid;
   try {
     if (wcMode) {
-      // WalletConnect: build the unsigned transfer, wallet signs, we broadcast
-      const tw = roTronWeb();
-      tw.setAddress(wcAddr);
-      const built = await tw.transactionBuilder.triggerSmartContract(
-        tw.address.toHex(PAYCFG.usdtContract),
-        'transfer(address,uint256)',
-        { feeLimit: 100_000_000, callValue: 0 },
-        [
-          { type: 'address', value: PAYCFG.address },
-          { type: 'uint256', value: Math.round(payTotal() * 1e6) }
-        ],
-        tw.address.toHex(wcAddr)
-      );
+      // WalletConnect: backend builds it, the wallet signs, backend broadcasts
+      const built = await apiTron('build', { body: { from: wcAddr, tier: tierKey } });
+      if (!built || !built.ok) throw new Error(built && built.error || 'build_failed');
+
       const signed = await window.TrivexWC.signTransaction(built.transaction);
-      const receipt = await tw.trx.sendRawTransaction(signed);
-      if (receipt && receipt.result === false) throw new Error('broadcast_failed');
-      txid = built.transaction.txID;
+      if (!signed || !signed.signature) throw new Error('not_signed');
+
+      const sent = await apiTron('broadcast', { body: { transaction: signed } });
+      if (!sent || !sent.ok) throw new Error(sent && sent.error || 'broadcast_failed');
+      txid = sent.txid;
     } else {
       // injected wallet: contract call signs and broadcasts in one step
       const tw = TWI || getTronWeb();
@@ -379,7 +390,9 @@ async function payReal(btn, status) {
     const msg = String((e && e.message) || e || '');
     console.warn('payment:', msg);
     let key = 'act_tx_fail';
-    if (/balance|bandwit?dh|energy|resource|insufficient/i.test(msg)) key = 'act_err_funds';
+    if (/not_signed/i.test(msg)) key = 'act_err_not_signed';
+    else if (/build_failed|broadcast_failed|chain_unavailable/i.test(msg)) key = 'act_err_chain';
+    else if (/balance|bandwit?dh|energy|resource|insufficient/i.test(msg)) key = 'act_err_funds';
     else if (/contract.*(not|does ?n)|not.*contract|REVERT/i.test(msg)) key = 'act_wrong_network_short';
     status.innerHTML = `<span>✕ ${t(key)}</span>`;
     btn.disabled = false;
