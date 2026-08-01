@@ -469,6 +469,8 @@ button { font-family: inherit; cursor: pointer; }
   border: 1px solid var(--border); border-radius: 11px; padding: 11px 14px; margin-bottom: 16px;
 }
 .pay__addr code { font-size: 13px; color: var(--text); word-break: break-all; flex: 1; }
+.paylinks { display: flex; flex-direction: column; gap: 9px; margin: 14px 0 18px; }
+.paylink { text-decoration: none; }
 .manual-fallback { margin-top: 6px; }
 .manual-fallback summary {
   cursor: pointer; font-size: 12.5px; color: var(--muted); padding: 6px 0; list-style: none;

@@ -280,6 +280,9 @@ function renderPayAmounts() {
 function startPayment() {
   renderPayAmounts();
   goStep(2);
+  // reserve the order straight away: the pay-by-link path needs no wallet
+  // session, so it is the one that always works
+  if (PAYCFG) openManual();
 }
 
 document.getElementById('toPayment').addEventListener('click', () => {
@@ -883,6 +886,40 @@ function receivingAddr() {
   return PAYCFG ? PAYCFG.address : DEMO_ADDR;
 }
 
+/* Build the "open wallet and pay" buttons for the reserved order. The link
+   carries recipient, token and amount, so the wallet opens ready to approve. */
+function renderPayLinks(order) {
+  const box = document.getElementById('payLinks');
+  if (!box || !window.TrivexPayLink || !CHAIN) return;
+  box.innerHTML = '';
+
+  const generic = window.TrivexPayLink.uri(CHAIN, order.address, order.amount);
+
+  window.TrivexPayLink.walletsFor(CHAIN).forEach((w, i) => {
+    const a = document.createElement('a');
+    a.className = 'btn ' + (i === 0 ? 'btn--primary' : 'btn--ghost') + ' btn--full paylink';
+    a.href = window.TrivexPayLink.walletUri(w.id, CHAIN, order.address, order.amount);
+    a.rel = 'noopener';
+    a.textContent = t('act_open_and_pay').replace('{wallet}', w.label);
+    box.appendChild(a);
+  });
+
+  const any = document.createElement('a');
+  any.className = 'btn btn--ghost btn--full paylink';
+  any.href = generic;
+  any.rel = 'noopener';
+  any.textContent = t('act_open_any_wallet');
+  box.appendChild(any);
+
+  // the QR carries the same prepared transfer for desktop → phone
+  const qr = document.getElementById('qrBox');
+  if (qr) {
+    qr.innerHTML = '';
+    new QRCode(qr, { text: generic, width: 170, height: 170, colorDark: '#07090f', colorLight: '#ffffff' });
+    qrDone = true;
+  }
+}
+
 document.getElementById('manualToggle').addEventListener('click', async () => {
   const box = document.getElementById('manualBox');
   const open = box.hidden;
@@ -898,10 +935,7 @@ document.getElementById('manualToggle').addEventListener('click', async () => {
       document.getElementById('payAddr').textContent = o.address;
       const amtEl = document.getElementById('manualAmount');
       if (amtEl) amtEl.textContent = o.amount + ' USDT';
-      const qr = document.getElementById('qrBox');
-      qr.innerHTML = '';
-      new QRCode(qr, { text: o.address, width: 170, height: 170, colorDark: '#07090f', colorLight: '#ffffff' });
-      qrDone = true;
+      renderPayLinks(o);
       status.innerHTML = `<span class="pulse"></span><span>${t('act_watching')}</span>`;
       startWatching(status);
     } catch (e) {
