@@ -10,6 +10,8 @@
    protection: one txid can only ever create one order. */
 
 import { put } from '@vercel/blob';
+import { getChain } from './_chains.js';
+import { verifyErc20Transfer, TX_HASH_RE } from './_evm.js';
 
 const TIERS = {
   lite:     { price: 0,   minTopup: 10 },
@@ -44,11 +46,76 @@ async function tronPost(base, path, body) {
   return r.json();
 }
 
+/* order bookkeeping shared by every chain */
+async function recordOrder(order) {
+  try {
+    await put(`orders/${order.chain}-${order.txid}.json`, JSON.stringify(order), {
+      access: 'private', addRandomSuffix: false, contentType: 'application/json'
+    });
+    return { ok: true };
+  } catch (err) {
+    // fixed pathname + no overwrite → a second claim of the same tx lands here
+    if (/exists|conflict/i.test(err.message || '')) return { ok: false, status: 'already_used' };
+    console.error('order store failed:', err.message);
+    return { ok: false, status: 'storage_error' };
+  }
+}
+
+function allowedPayer(from) {
+  if ((process.env.PAYMENTS_OPEN || 'private').toLowerCase() === 'public') return true;
+  const list = (process.env.TRON_PAYER_ALLOWLIST || '')
+    .split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
+  return list.includes(String(from || '').toLowerCase());
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
-  const { txid, tier } = req.query || {};
-  if (!txid || !TXID_RE.test(txid) || !tier || !TIERS[tier]) {
+  const { txid, tier, chain: chainId } = req.query || {};
+  if (!tier || !TIERS[tier]) {
+    return res.status(400).json({ ok: false, error: 'bad_request' });
+  }
+
+  /* ---- EVM chains (BNB, Ethereum, Polygon, Arbitrum) ---- */
+  if (chainId && chainId !== 'tron') {
+    const chain = getChain(chainId);
+    if (!chain || chain.kind !== 'evm') {
+      return res.status(400).json({ ok: false, error: 'unknown_chain' });
+    }
+    const hash = String(txid || '');
+    if (!TX_HASH_RE.test(hash)) {
+      return res.status(400).json({ ok: false, error: 'bad_request' });
+    }
+
+    const expectedUnits =
+      BigInt(TIERS[tier].price + TIERS[tier].minTopup) * 10n ** BigInt(chain.decimals);
+    const out = await verifyErc20Transfer(chain, hash.toLowerCase(), expectedUnits);
+
+    if (out.status === 'chain_unavailable') {
+      return res.status(502).json({ ok: false, error: 'chain_unavailable' });
+    }
+    if (out.status !== 'confirmed') {
+      return res.status(200).json({ ok: out.status === 'pending', ...out });
+    }
+    if (!allowedPayer(out.from)) {
+      return res.status(200).json({ ok: false, status: 'not_allowed' });
+    }
+
+    const stored = await recordOrder({
+      txid: hash.toLowerCase(), chain: chain.id, tier,
+      from: out.from, amount: out.amount, block: out.block,
+      at: new Date().toISOString()
+    });
+    if (!stored.ok) {
+      return stored.status === 'already_used'
+        ? res.status(200).json({ ok: false, status: 'already_used' })
+        : res.status(500).json({ ok: false, error: 'storage_error' });
+    }
+    return res.status(200).json({ ok: true, status: 'confirmed', tier, chain: chain.id });
+  }
+
+  /* ---- TRON ---- */
+  if (!txid || !TXID_RE.test(txid)) {
     return res.status(400).json({ ok: false, error: 'bad_request' });
   }
 
@@ -105,14 +172,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: false, status: 'underpaid', expected: expected.toString() });
   }
 
-  // private testing: only the operator's own wallets may complete an order
-  const open = (process.env.PAYMENTS_OPEN || 'private').toLowerCase() === 'public';
-  if (!open) {
-    const list = (process.env.TRON_PAYER_ALLOWLIST || '')
-      .split(',').map(a => a.trim()).filter(Boolean);
-    if (!list.includes(val.owner_address)) {
-      return res.status(200).json({ ok: false, status: 'not_allowed' });
-    }
+  if (!allowedPayer(val.owner_address)) {
+    return res.status(200).json({ ok: false, status: 'not_allowed' });
   }
 
   // must be mined, successful, and final
@@ -137,30 +198,21 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, status: 'pending', confirmations: head - info.blockNumber });
   }
 
-  const order = {
+  const stored = await recordOrder({
     txid: id,
+    chain: 'tron',
     tier,
     from: val.owner_address,
     amount: amount.toString(),
     network,
     block: info.blockNumber,
     at: new Date().toISOString()
-  };
-
-  try {
-    await put(`orders/${id}.json`, JSON.stringify(order), {
-      access: 'private',
-      addRandomSuffix: false,
-      contentType: 'application/json'
-    });
-  } catch (err) {
-    // fixed pathname + no overwrite → a second claim of the same txid lands here
-    if (/exists|conflict/i.test(err.message || '')) {
-      return res.status(200).json({ ok: false, status: 'already_used' });
-    }
-    console.error('order store failed:', err.message);
-    return res.status(500).json({ ok: false, error: 'storage_error' });
+  });
+  if (!stored.ok) {
+    return stored.status === 'already_used'
+      ? res.status(200).json({ ok: false, status: 'already_used' })
+      : res.status(500).json({ ok: false, error: 'storage_error' });
   }
 
-  return res.status(200).json({ ok: true, status: 'confirmed', tier });
+  return res.status(200).json({ ok: true, status: 'confirmed', tier, chain: 'tron' });
 }

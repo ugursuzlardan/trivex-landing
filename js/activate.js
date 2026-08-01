@@ -19,6 +19,10 @@ fetch('/api/payment-config')
       if (banner) { banner.removeAttribute('data-i18n'); banner.textContent = t('act_testnet'); }
     }
     if (PAYCFG) {
+      CHAIN = chains()[0] || null;
+      renderChainTabs();
+      renderWalletList();
+      renderPayAmounts();
       const hint = document.getElementById('netHint');
       hint.textContent = t('act_net_required') + ' ' + netLabel();
       hint.hidden = false;
@@ -45,6 +49,88 @@ async function checkCanPay(address) {
 
 function netLabel() {
   return PAYCFG && PAYCFG.network === 'mainnet' ? 'TRON Mainnet' : 'Nile Testnet';
+}
+
+/* ---------- chains ---------- */
+let CHAIN = null;   // the chain the customer is paying from
+
+function chains() { return (PAYCFG && PAYCFG.chains) || []; }
+function isEvm() { return CHAIN && CHAIN.kind === 'evm'; }
+
+/* smallest unit of the chain's USDT (TRON/ETH: 6 decimals, BSC: 18) */
+function amountUnits() {
+  return BigInt(payTotal()) * 10n ** BigInt(CHAIN ? CHAIN.decimals : 6);
+}
+
+function renderChainTabs() {
+  const box = document.getElementById('netTabs');
+  if (!box) return;
+  const list = chains();
+  box.innerHTML = '';
+  if (!CHAIN && list.length) CHAIN = list[0];
+  list.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'net-tab' + (CHAIN && c.id === CHAIN.id ? ' is-active' : '');
+    b.textContent = c.label;
+    b.addEventListener('click', () => {
+      if (CHAIN && c.id === CHAIN.id) return;
+      CHAIN = c;
+      resetConnection();
+      renderChainTabs();
+      renderWalletList();
+      renderPayAmounts();
+    });
+    box.appendChild(b);
+  });
+}
+
+/* drop any wallet session when the customer switches chain */
+function resetConnection() {
+  SIGNER = null; TWI = null; wcMode = false; wcAddr = null;
+  realConnection = false; connectedWallet = null; walletUsdt = null; netOk = false;
+  document.getElementById('connectBox').hidden = false;
+  document.getElementById('connectedBox').hidden = true;
+  document.getElementById('connectNote').hidden = true;
+  const cn = document.getElementById('connNote');
+  if (cn) cn.hidden = true;
+  qrDone = false;
+  const qr = document.getElementById('qrBox');
+  if (qr) qr.innerHTML = '';
+  const mb = document.getElementById('manualBox');
+  if (mb && !mb.hidden) document.getElementById('manualToggle').click();
+}
+
+const WALLETS_TRON = [
+  { id: 'TronLink',       icon: 'TL',  color: '#C23631' },
+  { id: 'OKX Wallet',     icon: 'OKX', color: '#0f0f0f' },
+  { id: 'TokenPocket',    icon: 'TP',  color: '#2761E7' },
+  { id: 'Trust Wallet',   icon: 'TW',  color: '#3375BB', sub: 'WalletConnect' },
+  { id: 'Binance Wallet', icon: 'B',   color: '#F0B90B', dark: true, sub: 'Web3' },
+  { id: 'WalletConnect',  icon: 'WC',  color: '#3B99FC', sub: 'Bitget · imToken…' }
+];
+
+const WALLETS_EVM = [
+  { id: 'MetaMask',        icon: 'MM',  color: '#E2761B' },
+  { id: 'Trust Wallet',    icon: 'TW',  color: '#3375BB' },
+  { id: 'Binance Wallet',  icon: 'B',   color: '#F0B90B', dark: true },
+  { id: 'Coinbase Wallet', icon: 'CB',  color: '#0052FF' },
+  { id: 'OKX Wallet',      icon: 'OKX', color: '#0f0f0f' }
+];
+
+function renderWalletList() {
+  const box = document.getElementById('connectList');
+  if (!box) return;
+  box.innerHTML = '';
+  (isEvm() ? WALLETS_EVM : WALLETS_TRON).forEach(w => {
+    const b = document.createElement('button');
+    b.className = 'connect-opt';
+    b.dataset.cwallet = w.id;
+    b.innerHTML =
+      `<span class="wallet__icon" style="--wc:${w.color}${w.dark ? ';color:#000' : ''}${w.color === '#0f0f0f' ? ';border:1px solid #333' : ''}">${w.icon}</span>` +
+      w.id + (w.sub ? ` <small class="connect-opt__sub">${w.sub}</small>` : '');
+    b.addEventListener('click', () => handleConnect(w.id, b));
+    box.appendChild(b);
+  });
 }
 
 /* ---------- Stepper ---------- */
@@ -221,17 +307,20 @@ function showNote(html) {
   note.hidden = false;
 }
 
-/* Shared tail for wallets that sign remotely (WalletConnect, Binance):
+/* Shared tail for wallets that sign remotely (WalletConnect, Binance, EVM):
    read balances from the backend and run the same pre-flight checks the
-   injected wallets get. */
+   injected TRON wallets get. */
 async function afterRemoteConnect(label, addr, signer) {
   SIGNER = signer;
   connectedWallet = label;
   realConnection = true; wcMode = true; wcAddr = addr; netOk = true;
 
   let balance = null;
-  const bal = await apiTron('balance', { query: '&address=' + encodeURIComponent(addr) })
-    .catch(() => null);
+  const bal = isEvm()
+    ? await fetch(`/api/evm-balance?chain=${CHAIN.id}&address=${encodeURIComponent(addr)}`)
+        .then(r => r.json()).catch(() => null)
+    : await apiTron('balance', { query: '&address=' + encodeURIComponent(addr) })
+        .catch(() => null);
   if (bal && bal.ok) {
     walletUsdt = bal.usdt;
     balance = bal.usdt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -248,8 +337,12 @@ async function afterRemoteConnect(label, addr, signer) {
     note.hidden = false;
     document.getElementById('payBtn').disabled = true;
     netOk = false;
-  } else if (bal && bal.ok && bal.trx < 25) {
+  } else if (bal && bal.ok && !isEvm() && bal.trx < 25) {
     note.textContent = t('act_low_trx');
+    note.hidden = false;
+  } else if (bal && bal.ok && isEvm() && bal.native <= 0) {
+    // no native coin → the wallet cannot pay gas on this chain
+    note.textContent = t('act_low_gas').replace('{sym}', bal.symbol || '');
     note.hidden = false;
   }
 }
@@ -259,9 +352,8 @@ function openManual() {
   if (box.hidden) document.getElementById('manualToggle').click();
 }
 
-document.querySelectorAll('.connect-opt').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    const name = btn.dataset.cwallet;
+async function handleConnect(name, btn) {
+  {
     const label = btn.childNodes[btn.childNodes.length - 1];
     const origLabel = label.textContent;
     btn.classList.add('is-connecting');
@@ -269,6 +361,31 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
     document.getElementById('connectNote').hidden = true;
 
     const reset = () => { btn.classList.remove('is-connecting'); label.textContent = origLabel; };
+
+    /* ---------- EVM chains: one EIP-1193 provider covers every wallet ---------- */
+    if (isEvm()) {
+      if (!window.TrivexEVM || !window.TrivexEVM.isAvailable()) {
+        reset();
+        showNote(IS_MOBILE ? t('act_note_evm_mobile') : t('act_note_evm_install'));
+        openManual();
+        return;
+      }
+      try {
+        const addr = await window.TrivexEVM.connect(CHAIN);
+        await afterRemoteConnect(window.TrivexEVM.name() || name, addr, {
+          signMessage: msg => window.TrivexEVM.signMessage(msg, addr),
+          sendTransfer: () => window.TrivexEVM.sendTransfer({
+            from: addr, chain: CHAIN, to: CHAIN.address, amountUnits: amountUnits()
+          })
+        });
+      } catch (e) {
+        console.warn('evm connect:', e && e.message);
+        showNote(t('act_note_rejected'));
+      } finally {
+        reset();
+      }
+      return;
+    }
 
     // local preview without backend → keep the old simulated handshake
     if (!PAYCFG) {
@@ -388,8 +505,8 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
     }
     showNote(t('act_note_open_wallet'));
     openManual();
-  });
-});
+  }
+}
 
 /* Pay from connected wallet.
    Real path (TronLink + backend config): sign a genuine USDT TRC-20 transfer,
@@ -430,8 +547,8 @@ function buildTermsMessage(orderRef) {
     L.head + ' #' + orderRef,
     '',
     `${L.plan}: Trivex ${tier.label}`,
-    `${L.amount}: ${payTotal()} USDT (TRC-20, TRON)`,
-    `${L.to}: ${PAYCFG.address}`,
+    `${L.amount}: ${payTotal()} USDT (${CHAIN ? CHAIN.label : 'TRON · TRC-20'})`,
+    `${L.to}: ${CHAIN ? CHAIN.address : PAYCFG.address}`,
     '',
     L.intro,
     ...L.terms,
@@ -480,7 +597,11 @@ async function payReal(btn, status) {
 
   status.innerHTML = `<span class="pulse"></span><span>${t('act_confirm_wallet')}</span>`;
   try {
-    if (wcMode) {
+    if (isEvm()) {
+      // EVM: the wallet builds, signs and broadcasts; we only supply calldata
+      txid = await SIGNER.sendTransfer();
+      if (!txid) throw new Error('not_signed');
+    } else if (wcMode) {
       // WalletConnect: backend builds it, the wallet signs, backend broadcasts
       const built = await apiTron('build', { body: { from: wcAddr, tier: tierKey } });
       if (!built || !built.ok) throw new Error(built && built.error || 'build_failed');
@@ -516,7 +637,7 @@ async function payReal(btn, status) {
   for (let i = 0; i < 40; i++) {
     await sleep(3000);
     try {
-      const r = await fetch(`/api/verify-payment?txid=${txid}&tier=${tierKey}`);
+      const r = await fetch(`/api/verify-payment?txid=${txid}&tier=${tierKey}&chain=${CHAIN ? CHAIN.id : 'tron'}`);
       const data = await r.json();
       if (data.status === 'confirmed') {
         status.innerHTML = `<span class="status-ok">✓</span><span>${t('act_confirmed')}</span>`;
@@ -581,7 +702,10 @@ document.getElementById('payBtn').addEventListener('click', () => {
 });
 
 /* Manual fallback (QR + address + txid verification) */
-function receivingAddr() { return PAYCFG ? PAYCFG.address : DEMO_ADDR; }
+function receivingAddr() {
+  if (CHAIN) return CHAIN.address;
+  return PAYCFG ? PAYCFG.address : DEMO_ADDR;
+}
 
 document.getElementById('manualToggle').addEventListener('click', () => {
   const box = document.getElementById('manualBox');
@@ -629,7 +753,7 @@ document.getElementById('checkTx').addEventListener('click', async () => {
     status.innerHTML = `<span class="pulse"></span><span>${t('act_checking')}</span>`;
     for (let i = 0; i < 20; i++) {
       try {
-        const r = await fetch(`/api/verify-payment?txid=${txid}&tier=${tierKey}`);
+        const r = await fetch(`/api/verify-payment?txid=${txid}&tier=${tierKey}&chain=${CHAIN ? CHAIN.id : 'tron'}`);
         const data = await r.json();
         if (data.status === 'confirmed') {
           status.innerHTML = `<span class="status-ok">✓</span><span>${t('act_confirmed')}</span>`;
@@ -717,6 +841,8 @@ function renderAll() {
   renderPlanPicker();
   renderSummary();
   renderPayAmounts();
+  renderChainTabs();
+  renderWalletList();
   const w = localStorage.getItem('trivex_wallet');
   document.getElementById('flowWallet').textContent =
     w && w !== 'other' ? w : t('act_wallet_none');

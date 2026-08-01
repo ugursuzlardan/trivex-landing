@@ -68,11 +68,9 @@
       <p class="flow__sub" data-i18n="act_pay_sub">Оплата USDT напряму з твого Web3-гаманця — без ручного копіювання адрес. Після підтвердження мережі картка випускається автоматично.</p>
 
       <div class="pay2">
-        <!-- network tabs -->
-        <div class="net-tabs">
-          <button class="net-tab is-active">TRON · TRC-20</button>
-          <button class="net-tab is-disabled" disabled>Ethereum · ERC-20 <em data-i18n="act_net_soon">Скоро</em></button>
-        </div>
+        <!-- network tabs (rendered from the backend chain config) -->
+        <div class="net-tabs" id="netTabs"></div>
+        <p class="pay2__hint pay2__chainhint" data-i18n="act_chain_hint">Немає коштів у цій мережі? Обери іншу — оплату приймаємо з будь-якої.</p>
 
         <div class="pay2__hint pay2__hint--net" id="netHint" hidden></div>
 
@@ -85,14 +83,7 @@
         <!-- connect -->
         <div id="connectBox">
           <p class="pay2__hint" data-i18n="act_choose_wallet">Обери гаманець для підключення</p>
-          <div class="connect-list">
-            <button class="connect-opt" data-cwallet="TronLink"><span class="wallet__icon" style="--wc:#C23631">TL</span>TronLink</button>
-            <button class="connect-opt" data-cwallet="OKX Wallet"><span class="wallet__icon" style="--wc:#0f0f0f;border:1px solid #333">OKX</span>OKX Wallet</button>
-            <button class="connect-opt" data-cwallet="TokenPocket"><span class="wallet__icon" style="--wc:#2761E7">TP</span>TokenPocket</button>
-            <button class="connect-opt" data-cwallet="Trust Wallet"><span class="wallet__icon" style="--wc:#3375BB">TW</span>Trust Wallet <small class="connect-opt__sub">WalletConnect</small></button>
-            <button class="connect-opt" data-cwallet="Binance Wallet"><span class="wallet__icon" style="--wc:#F0B90B;color:#000">B</span>Binance Wallet <small class="connect-opt__sub">Web3</small></button>
-            <button class="connect-opt" data-cwallet="WalletConnect"><span class="wallet__icon" style="--wc:#3B99FC">WC</span>WalletConnect <small class="connect-opt__sub">Bitget · imToken…</small></button>
-          </div>
+          <div class="connect-list" id="connectList"></div>
           <div class="connect-note" id="connectNote" hidden></div>
         </div>
 
@@ -187,6 +178,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="js/wc.js"></script>
   <script src="js/binance.js"></script>
+  <script src="js/evm.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/activate.js"></script>
 </body>
