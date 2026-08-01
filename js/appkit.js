@@ -25,7 +25,9 @@
     avalanche: 'avalanche'
   };
 
-  let mods = null, kit = null, initPromise = null;
+  const EVM_NETS = ['bsc', 'mainnet', 'polygon', 'arbitrum', 'base', 'optimism', 'avalanche'];
+
+  let mods = null, kit = null, kitNs = null, initPromise = null;
 
   async function load() {
     if (mods) return mods;
@@ -40,15 +42,42 @@
     return mods;
   }
 
-  async function init() {
-    if (kit) return kit;
+  /* Build the modal for ONE namespace only.
+
+     A session request lists every namespace the app was configured with, and
+     wallets reject the whole request when they cannot serve one of them —
+     Trust Wallet answers "some of the required chains are not supported yet"
+     if TRON is bundled in. AppKit's controllers are global singletons, so a
+     second instance cannot be created for another namespace; switching to a
+     different ecosystem reloads the page instead. */
+  async function init(chainId) {
+    const m = await load();
+    const net = m.nets[NET_FOR_CHAIN[chainId]];
+    if (!net) throw new Error('unsupported_chain');
+    const ns = net.chainNamespace;
+
+    if (kit) {
+      if (kitNs === ns) return kit;
+      const u = new URL(location.href);
+      u.searchParams.set('chain', chainId);
+      u.searchParams.set('connect', '1');
+      const email = document.getElementById('flowEmail');
+      if (email && email.value) u.searchParams.set('email', email.value);
+      location.replace(u.toString());
+      return new Promise(() => {});          // navigation takes over
+    }
     if (initPromise) return initPromise;
+
     initPromise = (async () => {
-      const m = await load();
-      const names = [...new Set(Object.values(NET_FOR_CHAIN))];
-      const networks = names.map(n => m.nets[n]).filter(Boolean);
+      const adapters =
+        ns === 'tron' ? [new m.tron.TronAdapter()] :
+        ns === 'solana' ? [new m.sol.SolanaAdapter()] :
+        [new m.eth.EthersAdapter()];
+      const networks =
+        ns === 'eip155' ? EVM_NETS.map(k => m.nets[k]).filter(Boolean) : [net];
+
       kit = m.ak.createAppKit({
-        adapters: [new m.eth.EthersAdapter(), new m.sol.SolanaAdapter(), new m.tron.TronAdapter()],
+        adapters,
         networks,
         projectId: PROJECT_ID,
         metadata: {
@@ -59,6 +88,7 @@
         },
         features: { analytics: false, email: false, socials: false, swaps: false, onramp: false }
       });
+      kitNs = ns;
       return kit;
     })();
     return initPromise;
@@ -83,9 +113,16 @@
   window.TrivexKit = {
     available: true,
 
+    /* true when the modal is already bound to a different ecosystem */
+    needsReload(chainId) {
+      if (!kit || !mods) return false;
+      const net = mods.nets[NET_FOR_CHAIN[chainId]];
+      return !!net && net.chainNamespace !== kitNs;
+    },
+
     /* opens the wallet modal and resolves with the address on that chain */
     async connect(chainId, { timeoutMs = 180000 } = {}) {
-      const k = await init();
+      const k = await init(chainId);
       const net = netFor(chainId);
       if (!net) throw new Error('unsupported_chain');
       const ns = net.chainNamespace;
@@ -115,7 +152,7 @@
 
     /* the wallet renders this text on its approval screen */
     async signMessage(chainId, message, address) {
-      const k = await init();
+      const k = await init(chainId);
       const net = netFor(chainId);
       const ns = net.chainNamespace;
       const provider = k.getProvider(ns);
@@ -142,7 +179,7 @@
 
     /* returns the transaction id of the USDT transfer */
     async pay(chainId, { from, to, amountUnits, tier }) {
-      const k = await init();
+      const k = await init(chainId);
       const net = netFor(chainId);
       const ns = net.chainNamespace;
       const provider = k.getProvider(ns);

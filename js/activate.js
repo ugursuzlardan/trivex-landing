@@ -20,10 +20,23 @@ fetch('/api/payment-config')
     }
     if (PAYCFG) {
       window.PAYCFG_CHAINS = PAYCFG.chains || [];
-      CHAIN = chains()[0] || null;
+      // a chain in the URL survives the reload AppKit needs when the customer
+      // moves between ecosystems
+      const wanted = params.get('chain');
+      CHAIN = chains().find(c => c.id === wanted) || chains()[0] || null;
       renderChainTabs();
       renderWalletList();
       renderPayAmounts();
+      // came back from the reload with a wallet waiting to be picked
+      if (params.get('connect') === '1' && params.get('email')) {
+        const em = document.getElementById('flowEmail');
+        em.value = params.get('email');
+        document.getElementById('toPayment').click();
+        setTimeout(() => {
+          const b = document.querySelector('.connect-opt--primary');
+          if (b) b.click();
+        }, 400);
+      }
       const hint = document.getElementById('netHint');
       hint.textContent = t('act_net_required') + ' ' + netLabel();
       hint.hidden = false;
@@ -77,6 +90,15 @@ function renderChainTabs() {
     b.textContent = c.label;
     b.addEventListener('click', () => {
       if (CHAIN && c.id === CHAIN.id) return;
+      // the wallet modal is bound to one ecosystem per page load
+      if (window.TrivexKit && window.TrivexKit.needsReload(c.id)) {
+        const u = new URL(location.href);
+        u.searchParams.set('chain', c.id);
+        const em = document.getElementById('flowEmail');
+        if (em && em.value) u.searchParams.set('email', em.value);
+        location.replace(u.toString());
+        return;
+      }
       CHAIN = c;
       resetConnection();
       renderChainTabs();
@@ -190,6 +212,10 @@ async function connectViaKit(btn) {
   } catch (e) {
     console.warn('appkit connect:', e && e.message);
     showNote(t('act_note_rejected'));
+    // give an immediate alternative rather than a dead end
+    const box = document.getElementById('connectList');
+    box.dataset.expanded = '1';
+    renderLegacyWallets(box);
   } finally {
     btn.classList.remove('is-connecting');
     label.textContent = orig;
