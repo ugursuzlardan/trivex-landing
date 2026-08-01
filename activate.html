@@ -117,18 +117,22 @@
               <div class="pay__timer"><span data-i18n="act_timer_label">Резервація курсу:</span> <b id="payTimer">15:00</b></div>
             </div>
             <div class="pay__info">
+              <div class="pay__amount-label" data-i18n="act_exact_amount">Надішли рівно цю суму</div>
+              <div class="pay__amount"><span id="manualAmount">—</span></div>
               <div class="pay__addr-label" data-i18n="act_addr">Адреса активації (TRC-20)</div>
               <div class="pay__addr">
                 <code id="payAddr">TQrY8Fk2mXvA5dNw3cJp7uHsE9gRkLzB4t</code>
                 <button class="btn btn--ghost btn--sm" id="copyAddr" data-i18n="act_copy">Копіювати</button>
               </div>
               <div class="pay__warn" data-i18n="act_only_trc">Надсилай лише USDT у мережі TRON (TRC-20). Інші мережі призведуть до втрати коштів.</div>
-              <div class="pay__addr-label" data-i18n="act_txid_label">Хеш транзакції (txid) після відправлення</div>
-              <input type="text" id="manualTxid" class="manual-txid" placeholder="a1b2c3…" autocomplete="off">
               <div class="pay__status" id="payStatus">
-                <span class="pulse"></span><span data-i18n="act_waiting">Очікуємо транзакцію в мережі TRON…</span>
+                <span class="pulse"></span><span data-i18n="act_watching">Очікуємо платіж…</span>
               </div>
-              <button class="btn btn--primary btn--full" id="checkTx" data-i18n="act_check">Я надіслав — перевірити</button>
+              <details class="manual-fallback">
+                <summary data-i18n="act_manual_check">Платіж не знайдено? Перевірити за хешем</summary>
+                <input type="text" id="manualTxid" class="manual-txid" placeholder="a1b2c3…" autocomplete="off">
+                <button class="btn btn--ghost btn--full" id="checkTx" data-i18n="act_check">Перевірити</button>
+              </details>
             </div>
           </div>
         </div>

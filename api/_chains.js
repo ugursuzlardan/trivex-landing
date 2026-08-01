@@ -32,6 +32,7 @@ export const CHAINS = {
     decimals: 18,
     nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
     addressEnv: 'EVM_RECEIVING_ADDRESS',
+    scanBlocks: 900,
     minConfirmations: 15,
     explorer: 'https://bscscan.com'
   },
@@ -51,6 +52,7 @@ export const CHAINS = {
     decimals: 6,
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     addressEnv: 'EVM_RECEIVING_ADDRESS',
+    scanBlocks: 900,
     minConfirmations: 12,
     explorer: 'https://etherscan.io'
   },
@@ -69,6 +71,7 @@ export const CHAINS = {
     decimals: 6,
     nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
     addressEnv: 'EVM_RECEIVING_ADDRESS',
+    scanBlocks: 900,
     minConfirmations: 30,
     explorer: 'https://polygonscan.com'
   },
@@ -100,6 +103,7 @@ export const CHAINS = {
     decimals: 6,
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     addressEnv: 'EVM_RECEIVING_ADDRESS',
+    scanBlocks: 900,
     minConfirmations: 20,
     explorer: 'https://basescan.org'
   },
@@ -115,6 +119,7 @@ export const CHAINS = {
     decimals: 6,
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     addressEnv: 'EVM_RECEIVING_ADDRESS',
+    scanBlocks: 900,
     minConfirmations: 20,
     explorer: 'https://optimistic.etherscan.io'
   },
@@ -130,6 +135,7 @@ export const CHAINS = {
     decimals: 6,
     nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
     addressEnv: 'EVM_RECEIVING_ADDRESS',
+    scanBlocks: 900,
     minConfirmations: 15,
     explorer: 'https://snowtrace.io'
   },
@@ -148,6 +154,7 @@ export const CHAINS = {
     decimals: 6,
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     addressEnv: 'EVM_RECEIVING_ADDRESS',
+    scanBlocks: 900,
     minConfirmations: 20,
     explorer: 'https://arbiscan.io'
   }

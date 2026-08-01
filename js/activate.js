@@ -755,17 +755,86 @@ document.getElementById('payBtn').addEventListener('click', () => {
   }
 });
 
+/* ---------- automatic payment detection ----------
+   An order reserves a unique amount, so a transfer from any wallet or
+   exchange identifies itself. Nothing has to be pasted. */
+let ORDER = null, watchTimer = null;
+
+async function createOrder() {
+  const r = await fetch('/api/order?action=create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier: tierKey, chain: CHAIN ? CHAIN.id : 'tron' })
+  });
+  const d = await r.json();
+  if (!d.ok) throw new Error(d.error || 'order_failed');
+  ORDER = d;
+  return d;
+}
+
+function stopWatching() {
+  if (watchTimer) { clearInterval(watchTimer); watchTimer = null; }
+}
+
+/* poll until the payment lands, then issue the card */
+function startWatching(statusEl) {
+  stopWatching();
+  let ticks = 0;
+  watchTimer = setInterval(async () => {
+    ticks++;
+    if (!ORDER || ticks > 220) return stopWatching();     // ~18 minutes
+    try {
+      const r = await fetch(`/api/order?action=status&ref=${ORDER.ref}`);
+      const d = await r.json();
+      if (d.status === 'paid') {
+        stopWatching();
+        statusEl.innerHTML = `<span class="status-ok">✓</span><span>${t('act_confirmed')}</span>`;
+        setTimeout(issueCard, 1200);
+      } else if (d.status === 'confirming') {
+        statusEl.innerHTML = `<span class="pulse"></span><span>${t('act_confirming')
+          .replace('{n}', d.confirmations || 0)}</span>`;
+      } else if (d.status === 'expired') {
+        stopWatching();
+        statusEl.innerHTML = `<span>✕ ${t('act_order_expired')}</span>`;
+      }
+    } catch { /* keep polling through transient errors */ }
+  }, 5000);
+}
+
 /* Manual fallback (QR + address + txid verification) */
 function receivingAddr() {
   if (CHAIN) return CHAIN.address;
   return PAYCFG ? PAYCFG.address : DEMO_ADDR;
 }
 
-document.getElementById('manualToggle').addEventListener('click', () => {
+document.getElementById('manualToggle').addEventListener('click', async () => {
   const box = document.getElementById('manualBox');
   const open = box.hidden;
   box.hidden = !open;
   document.getElementById('manualToggle').textContent = open ? t('act_manual_hide') : t('act_manual_toggle');
+  if (!open) { stopWatching(); return; }
+
+  if (open && PAYCFG) {
+    // reserve a unique amount and start watching the chain for it
+    const status = document.getElementById('payStatus');
+    try {
+      const o = await createOrder();
+      document.getElementById('payAddr').textContent = o.address;
+      const amtEl = document.getElementById('manualAmount');
+      if (amtEl) amtEl.textContent = o.amount + ' USDT';
+      const qr = document.getElementById('qrBox');
+      qr.innerHTML = '';
+      new QRCode(qr, { text: o.address, width: 170, height: 170, colorDark: '#07090f', colorLight: '#ffffff' });
+      qrDone = true;
+      status.innerHTML = `<span class="pulse"></span><span>${t('act_watching')}</span>`;
+      startWatching(status);
+    } catch (e) {
+      console.warn('order:', e && e.message);
+      status.innerHTML = `<span>✕ ${t('act_err_chain')}</span>`;
+    }
+    return;
+  }
+
   if (open && !qrDone) {
     document.getElementById('payAddr').textContent = receivingAddr();
     new QRCode(document.getElementById('qrBox'), {
