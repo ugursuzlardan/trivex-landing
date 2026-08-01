@@ -118,11 +118,17 @@ function resetConnection() {
   document.getElementById('connectNote').hidden = true;
   const cn = document.getElementById('connNote');
   if (cn) cn.hidden = true;
+  // the order is tied to one chain and amount, so start a fresh one
+  stopWatching();
+  ORDER = null; orderPromise = null;
   qrDone = false;
   const qr = document.getElementById('qrBox');
   if (qr) qr.innerHTML = '';
-  const mb = document.getElementById('manualBox');
-  if (mb && !mb.hidden) document.getElementById('manualToggle').click();
+  const links = document.getElementById('payLinks');
+  if (links) links.innerHTML = '';
+  const amt = document.getElementById('manualAmount');
+  if (amt) amt.textContent = '—';
+  if (document.getElementById('step2').classList.contains('is-visible')) ensureOrder();
 }
 
 const WALLETS_TRON = [
@@ -280,9 +286,34 @@ function renderPayAmounts() {
 function startPayment() {
   renderPayAmounts();
   goStep(2);
-  // reserve the order straight away: the pay-by-link path needs no wallet
-  // session, so it is the one that always works
-  if (PAYCFG) openManual();
+  // reserve the order straight away: paying by link needs no wallet session,
+  // so it is the path that always works
+  ensureOrder();
+}
+
+/* create the order, show the pay links and start watching the chain */
+let orderPromise = null;
+function ensureOrder() {
+  if (!PAYCFG || orderPromise) return orderPromise;
+  const status = document.getElementById('payStatus');
+  orderPromise = (async () => {
+    try {
+      const o = await createOrder();
+      document.getElementById('payAddr').textContent = o.address;
+      const amtEl = document.getElementById('manualAmount');
+      if (amtEl) amtEl.textContent = o.amount + ' USDT';
+      renderPayLinks(o);
+      status.innerHTML = `<span class="pulse"></span><span>${t('act_watching')}</span>`;
+      startWatching(status);
+      return o;
+    } catch (e) {
+      console.warn('order:', e && e.message);
+      status.innerHTML = `<span>✕ ${t('act_err_chain')}</span>`;
+      orderPromise = null;
+      return null;
+    }
+  })();
+  return orderPromise;
 }
 
 document.getElementById('toPayment').addEventListener('click', () => {
@@ -925,25 +956,9 @@ document.getElementById('manualToggle').addEventListener('click', async () => {
   const open = box.hidden;
   box.hidden = !open;
   document.getElementById('manualToggle').textContent = open ? t('act_manual_hide') : t('act_manual_toggle');
-  if (!open) { stopWatching(); return; }
+  if (!open) return;
 
-  if (open && PAYCFG) {
-    // reserve a unique amount and start watching the chain for it
-    const status = document.getElementById('payStatus');
-    try {
-      const o = await createOrder();
-      document.getElementById('payAddr').textContent = o.address;
-      const amtEl = document.getElementById('manualAmount');
-      if (amtEl) amtEl.textContent = o.amount + ' USDT';
-      renderPayLinks(o);
-      status.innerHTML = `<span class="pulse"></span><span>${t('act_watching')}</span>`;
-      startWatching(status);
-    } catch (e) {
-      console.warn('order:', e && e.message);
-      status.innerHTML = `<span>✕ ${t('act_err_chain')}</span>`;
-    }
-    return;
-  }
+  if (PAYCFG) { ensureOrder(); return; }
 
   if (open && !qrDone) {
     document.getElementById('payAddr').textContent = receivingAddr();
