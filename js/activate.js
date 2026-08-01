@@ -273,13 +273,16 @@ function renderSummary() {
 let timerId, qrDone = false, connectedWallet = null, realConnection = false;
 
 function renderPayAmounts() {
-  document.getElementById('payAmount').textContent = payTotal();
-  document.getElementById('payBtn').textContent = `${t('act_pay')} ${payTotal()} USDT`;
+  // once an order exists the exact figure is what identifies the payment
+  const due = ORDER ? ORDER.amount : payTotal();
+  document.getElementById('payAmount').textContent = due;
+  document.getElementById('payBtn').textContent = `${t('act_pay')} ${due} USDT`;
   // the user sees exactly what they are paying for before signing
   const purpose = document.getElementById('payPurpose');
   if (purpose) {
     purpose.textContent =
-      `${t('act_purpose')}: Trivex ${TIERS[tierKey].label} — ${t('tier_issue')} + ${t('act_first_topup')} · ${payTotal()} USDT (TRC-20)`;
+      `${t('act_purpose')}: Trivex ${TIERS[tierKey].label} — ${t('tier_issue')} + ${t('act_first_topup')} · ` +
+      `${due} USDT (${CHAIN ? CHAIN.label : 'TRON · TRC-20'})`;
   }
 }
 
@@ -304,6 +307,7 @@ function ensureOrder() {
       const amtEl = document.getElementById('manualAmount');
       if (amtEl) amtEl.textContent = o.amount + ' USDT';
       renderPayLinks(o);
+      renderPayAmounts();               // show the exact figure everywhere
       status.innerHTML = `<span class="pulse"></span><span>${t('act_watching')}</span>`;
       startWatching(status);
       return o;
