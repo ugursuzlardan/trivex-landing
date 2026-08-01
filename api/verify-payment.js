@@ -161,9 +161,13 @@ export default async function handler(req, res) {
   if (!data.startsWith(TRANSFER_SELECTOR) || data.length < 8 + 128) {
     return res.status(200).json({ ok: false, status: 'wrong_tx' });
   }
-  const toHex = data.slice(8 + 64 - 42, 8 + 64);          // last 21 bytes of arg 1
+  // Wallets ABI-encode the recipient either as the 21-byte TRON address
+  // (0x41 + 20 bytes) or as the bare 20-byte address. Compare the last 20
+  // bytes so both encodings verify.
+  const toHex = data.slice(8 + 64 - 40, 8 + 64);
   const amount = BigInt('0x' + data.slice(8 + 64, 8 + 128));
-  const expectedToHex = base58ToHex(address);
+  const expectedHex = base58ToHex(address);
+  const expectedToHex = expectedHex ? expectedHex.slice(2) : null;
 
   if (!expectedToHex || toHex !== expectedToHex) {
     return res.status(200).json({ ok: false, status: 'wrong_recipient' });
