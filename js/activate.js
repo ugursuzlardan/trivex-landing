@@ -128,8 +128,9 @@ const DEEP_LINKS = {
 };
 
 let TWI = null;         // active tronWeb instance once connected (injected wallets)
-let wcMode = false;     // connected via WalletConnect
-let wcAddr = null;      // WalletConnect address
+let wcMode = false;     // connected through a remote signer (WalletConnect / Binance)
+let wcAddr = null;      // that wallet's address
+let SIGNER = null;      // object exposing signMessage / signTransaction
 let walletUsdt = null;  // connected wallet's USDT balance
 
 /* Chain work for WalletConnect wallets runs on the backend: TronWeb's browser
@@ -220,6 +221,39 @@ function showNote(html) {
   note.hidden = false;
 }
 
+/* Shared tail for wallets that sign remotely (WalletConnect, Binance):
+   read balances from the backend and run the same pre-flight checks the
+   injected wallets get. */
+async function afterRemoteConnect(label, addr, signer) {
+  SIGNER = signer;
+  connectedWallet = label;
+  realConnection = true; wcMode = true; wcAddr = addr; netOk = true;
+
+  let balance = null;
+  const bal = await apiTron('balance', { query: '&address=' + encodeURIComponent(addr) })
+    .catch(() => null);
+  if (bal && bal.ok) {
+    walletUsdt = bal.usdt;
+    balance = bal.usdt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  showConnected(label, addr, balance);
+
+  const note = document.getElementById('connNote');
+  note.hidden = true;
+  document.getElementById('payBtn').disabled = false;
+  if (bal && bal.ok && bal.usdt < payTotal()) {
+    note.textContent = t('act_low_usdt')
+      .replace('{have}', bal.usdt.toFixed(2))
+      .replace('{need}', payTotal());
+    note.hidden = false;
+    document.getElementById('payBtn').disabled = true;
+    netOk = false;
+  } else if (bal && bal.ok && bal.trx < 25) {
+    note.textContent = t('act_low_trx');
+    note.hidden = false;
+  }
+}
+
 function openManual() {
   const box = document.getElementById('manualBox');
   if (box.hidden) document.getElementById('manualToggle').click();
@@ -246,6 +280,33 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
       return;
     }
 
+    // Binance Web3 Wallet: its own TRON adapter when injected, else WalletConnect
+    if (name === 'Binance Wallet') {
+      try {
+        if (window.TrivexBinance && await window.TrivexBinance.isSupported()) {
+          const addr = await window.TrivexBinance.connect();
+          await afterRemoteConnect(name, addr, window.TrivexBinance);
+          return;
+        }
+        if (IS_MOBILE && window.TrivexBinance) {
+          // open the page inside the Binance app, where the wallet is injected
+          showNote(t('act_note_binance_app'));
+          window.TrivexBinance.openApp();
+          return;
+        }
+        // desktop without the extension → Binance is also listed in WalletConnect
+        showNote(t('act_note_binance_wc'));
+        const addr = await window.TrivexWC.connect(PAYCFG.network);
+        await afterRemoteConnect(name, addr, window.TrivexWC);
+      } catch (e) {
+        console.warn('binance:', e && e.message);
+        showNote(t('act_note_rejected'));
+      } finally {
+        reset();
+      }
+      return;
+    }
+
     // WalletConnect: QR / wallet-list modal (Trust, Bitget, TokenPocket, imToken…)
     if (name === 'WalletConnect' || name === 'Trust Wallet') {
       if (!window.TrivexWC) {
@@ -255,34 +316,7 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
       showNote(name === 'Trust Wallet' ? t('act_note_trust') : t('act_note_wc_tron'));
       try {
         const addr = await window.TrivexWC.connect(PAYCFG.network);
-        netOk = true; // WC session is opened on the configured chain
-        connectedWallet = name;
-        realConnection = true; wcMode = true; wcAddr = addr;
-
-        let balance = null;
-        const bal = await apiTron('balance', { query: '&address=' + encodeURIComponent(addr) })
-          .catch(() => null);
-        if (bal && bal.ok) {
-          walletUsdt = bal.usdt;
-          balance = bal.usdt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-        showConnected(name, addr, balance);
-
-        // same pre-flight checks as injected wallets
-        const note = document.getElementById('connNote');
-        note.hidden = true;
-        document.getElementById('payBtn').disabled = false;
-        if (bal && bal.ok && bal.usdt < payTotal()) {
-          note.textContent = t('act_low_usdt')
-            .replace('{have}', bal.usdt.toFixed(2))
-            .replace('{need}', payTotal());
-          note.hidden = false;
-          document.getElementById('payBtn').disabled = true;
-          netOk = false;
-        } else if (bal && bal.ok && bal.trx < 25) {
-          note.textContent = t('act_low_trx');
-          note.hidden = false;
-        }
+        await afterRemoteConnect(name, addr, window.TrivexWC);
       } catch (e) {
         console.warn('walletconnect:', e && e.message);
         showNote(t('act_note_rejected'));
@@ -413,7 +447,7 @@ async function signTerms(status) {
 
   let signature;
   if (wcMode) {
-    signature = await window.TrivexWC.signMessage(message);
+    signature = await SIGNER.signMessage(message);
   } else {
     const tw = TWI || getTronWeb();
     signature = await tw.trx.signMessageV2(message);
@@ -451,7 +485,7 @@ async function payReal(btn, status) {
       const built = await apiTron('build', { body: { from: wcAddr, tier: tierKey } });
       if (!built || !built.ok) throw new Error(built && built.error || 'build_failed');
 
-      const signed = await window.TrivexWC.signTransaction(built.transaction);
+      const signed = await SIGNER.signTransaction(built.transaction);
       if (!signed || !signed.signature) throw new Error('not_signed');
 
       const sent = await apiTron('broadcast', { body: { transaction: signed } });
