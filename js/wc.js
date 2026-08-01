@@ -48,6 +48,12 @@
       if (!adapter) throw new Error('wc_not_connected');
       return adapter.signTransaction(unsignedTx);
     },
+    /* asks the wallet to sign a plain-text message — the wallet shows the text
+       to the user, which is how the order terms reach the approval screen */
+    async signMessage(message) {
+      if (!adapter) throw new Error('wc_not_connected');
+      return adapter.signMessage(message);
+    },
     async disconnect() {
       if (adapter) { try { await adapter.disconnect(); } catch { /* noop */ } }
     }

@@ -363,9 +363,88 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
    Demo path otherwise: simulated confirmation, no funds move. */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+/* The wallet shows the text of a signed message to the user, so the order
+   details and terms are put in front of them before any funds move. */
+function buildTermsMessage(orderRef) {
+  const tier = TIERS[tierKey];
+  const L = window.trivexLang === 'en' ? {
+    head: 'TRIVEX — Card activation',
+    plan: 'Plan', amount: 'Amount', to: 'Recipient', order: 'Order',
+    intro: 'By signing you confirm the terms below:',
+    terms: [
+      '1. This is a one-time activation fee for a Trivex virtual card, plus your first top-up.',
+      '2. Crypto payments are final: once confirmed on the TRON network they cannot be reversed.',
+      '3. Trivex is not a bank. Cards are issued through licensed payment partners.',
+      '4. You must be 18+ and comply with the laws of your country. Higher limits require verification (KYC).',
+      '5. TEST MODE: the service is under development and cards are NOT being issued yet.'
+    ],
+    note: 'Signing this message costs nothing and moves no funds.'
+  } : {
+    head: 'TRIVEX — Активація картки',
+    plan: 'Тариф', amount: 'Сума', to: 'Отримувач', order: 'Замовлення',
+    intro: 'Підписуючи, ти підтверджуєш умови:',
+    terms: [
+      '1. Це разова комісія за випуск віртуальної картки Trivex та перше поповнення.',
+      '2. Криптоплатежі незворотні: після підтвердження в мережі TRON скасувати неможливо.',
+      '3. Trivex не є банком. Картки випускаються через ліцензованих платіжних партнерів.',
+      '4. Тобі має бути 18+, і ти дотримуєшся законів своєї країни. Вищі ліміти потребують верифікації (KYC).',
+      '5. ТЕСТОВИЙ РЕЖИМ: сервіс у розробці, картки поки НЕ випускаються.'
+    ],
+    note: 'Підпис цього повідомлення безкоштовний і не переказує кошти.'
+  };
+  return [
+    L.head + ' #' + orderRef,
+    '',
+    `${L.plan}: Trivex ${tier.label}`,
+    `${L.amount}: ${payTotal()} USDT (TRC-20, TRON)`,
+    `${L.to}: ${PAYCFG.address}`,
+    '',
+    L.intro,
+    ...L.terms,
+    '',
+    L.note
+  ].join('\n');
+}
+
+async function signTerms(status) {
+  const orderRef = String(Math.floor(100000 + Math.random() * 899999));
+  const message = buildTermsMessage(orderRef);
+  status.innerHTML = `<span class="pulse"></span><span>${t('act_sign_terms')}</span>`;
+
+  let signature;
+  if (wcMode) {
+    signature = await window.TrivexWC.signMessage(message);
+  } else {
+    const tw = TWI || getTronWeb();
+    signature = await tw.trx.signMessageV2(message);
+  }
+  if (!signature) throw new Error('terms_not_signed');
+
+  const address = wcMode ? wcAddr : (TWI || getTronWeb()).defaultAddress.base58;
+  // best-effort: a stored consent record should never block a paying customer
+  fetch('/api/consent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address, tier: tierKey, orderRef, message, signature })
+  }).catch(() => {});
+
+  return orderRef;
+}
+
 async function payReal(btn, status) {
-  status.innerHTML = `<span class="pulse"></span><span>${t('act_confirm_wallet')}</span>`;
   let txid;
+
+  // terms first — the wallet renders this text on its approval screen
+  try {
+    await signTerms(status);
+  } catch (e) {
+    console.warn('terms:', String((e && e.message) || e || ''));
+    status.innerHTML = `<span>✕ ${t('act_err_terms')}</span>`;
+    btn.disabled = false;
+    return;
+  }
+
+  status.innerHTML = `<span class="pulse"></span><span>${t('act_confirm_wallet')}</span>`;
   try {
     if (wcMode) {
       // WalletConnect: backend builds it, the wallet signs, backend broadcasts
