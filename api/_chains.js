@@ -72,6 +72,67 @@ export const CHAINS = {
     minConfirmations: 30,
     explorer: 'https://polygonscan.com'
   },
+  solana: {
+    id: 'solana',
+    kind: 'solana',
+    label: 'Solana · SPL',
+    short: 'SOL',
+    rpcs: [
+      'https://api.mainnet-beta.solana.com',
+      'https://solana-rpc.publicnode.com'
+    ],
+    token: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+    decimals: 6,
+    nativeCurrency: { name: 'Solana', symbol: 'SOL', decimals: 9 },
+    addressEnv: 'SOLANA_RECEIVING_ADDRESS',
+    minConfirmations: 0,           // verified at 'finalized' commitment
+    explorer: 'https://solscan.io'
+  },
+  base: {
+    id: 'base',
+    kind: 'evm',
+    label: 'Base · USDT',
+    short: 'BASE',
+    chainId: 8453,
+    chainIdHex: '0x2105',
+    rpcs: ['https://base-rpc.publicnode.com', 'https://mainnet.base.org'],
+    token: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2',
+    decimals: 6,
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    addressEnv: 'EVM_RECEIVING_ADDRESS',
+    minConfirmations: 20,
+    explorer: 'https://basescan.org'
+  },
+  optimism: {
+    id: 'optimism',
+    kind: 'evm',
+    label: 'Optimism · USDT',
+    short: 'OP',
+    chainId: 10,
+    chainIdHex: '0xa',
+    rpcs: ['https://optimism-rpc.publicnode.com', 'https://mainnet.optimism.io'],
+    token: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58',
+    decimals: 6,
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    addressEnv: 'EVM_RECEIVING_ADDRESS',
+    minConfirmations: 20,
+    explorer: 'https://optimistic.etherscan.io'
+  },
+  avalanche: {
+    id: 'avalanche',
+    kind: 'evm',
+    label: 'Avalanche · USDT',
+    short: 'AVAX',
+    chainId: 43114,
+    chainIdHex: '0xa86a',
+    rpcs: ['https://avalanche-c-chain-rpc.publicnode.com', 'https://api.avax.network/ext/bc/C/rpc'],
+    token: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7',
+    decimals: 6,
+    nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+    addressEnv: 'EVM_RECEIVING_ADDRESS',
+    minConfirmations: 15,
+    explorer: 'https://snowtrace.io'
+  },
   arbitrum: {
     id: 'arbitrum',
     kind: 'evm',
@@ -102,7 +163,7 @@ export function enabledChains() {
     .filter(Boolean)
     .map(c => {
       const address = process.env[c.addressEnv];
-      const token = c.kind === 'tron' ? process.env[c.tokenEnv] : c.token;
+      const token = c.tokenEnv ? process.env[c.tokenEnv] : c.token;
       if (!address || !token) return null;
       return { ...c, address, token };
     })

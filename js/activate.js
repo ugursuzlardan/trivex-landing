@@ -56,6 +56,8 @@ let CHAIN = null;   // the chain the customer is paying from
 
 function chains() { return (PAYCFG && PAYCFG.chains) || []; }
 function isEvm() { return CHAIN && CHAIN.kind === 'evm'; }
+/* chains we can drive from the page vs. ones paid by plain transfer */
+function hasWalletFlow() { return CHAIN && (CHAIN.kind === 'tron' || CHAIN.kind === 'evm'); }
 
 /* smallest unit of the chain's USDT (TRON/ETH: 6 decimals, BSC: 18) */
 function amountUnits() {
@@ -121,6 +123,17 @@ function renderWalletList() {
   const box = document.getElementById('connectList');
   if (!box) return;
   box.innerHTML = '';
+
+  // no in-page signing for this chain → send the customer straight to the
+  // transfer-and-verify flow instead of showing wallets that cannot sign
+  if (!hasWalletFlow()) {
+    document.getElementById('connectBox').hidden = true;
+    showNote(t('act_note_transfer_only').replace('{chain}', CHAIN ? CHAIN.short : ''));
+    openManual();
+    return;
+  }
+  document.getElementById('connectBox').hidden = false;
+
   (isEvm() ? WALLETS_EVM : WALLETS_TRON).forEach(w => {
     const b = document.createElement('button');
     b.className = 'connect-opt';
@@ -785,8 +798,15 @@ document.getElementById('checkTx').addEventListener('click', async () => {
 
   // real mode: verify the pasted txid on-chain
   if (PAYCFG) {
-    const txid = (document.getElementById('manualTxid').value || '').trim().toLowerCase();
-    if (!/^[0-9a-f]{64}$/.test(txid)) {
+    const raw = (document.getElementById('manualTxid').value || '').trim();
+    // hash format differs per chain: TRON hex, EVM 0x-prefixed, Solana base58
+    const kind = CHAIN ? CHAIN.kind : 'tron';
+    const txid = kind === 'solana' ? raw : raw.toLowerCase();
+    const valid =
+      kind === 'solana' ? /^[1-9A-HJ-NP-Za-km-z]{80,90}$/.test(txid) :
+      kind === 'evm'    ? /^0x[0-9a-f]{64}$/.test(txid) :
+                          /^[0-9a-f]{64}$/.test(txid);
+    if (!valid) {
       status.innerHTML = `<span>✕ ${t('act_txid_invalid')}</span>`;
       btn.disabled = false;
       return;

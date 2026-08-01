@@ -12,6 +12,7 @@
 import { put } from '@vercel/blob';
 import { getChain } from './_chains.js';
 import { verifyErc20Transfer, TX_HASH_RE } from './_evm.js';
+import { verifySplTransfer, SOL_SIG_RE } from './_solana.js';
 
 const TIERS = {
   lite:     { price: 0,   minTopup: 10 },
@@ -76,20 +77,28 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: 'bad_request' });
   }
 
-  /* ---- EVM chains (BNB, Ethereum, Polygon, Arbitrum) ---- */
+  /* ---- non-TRON chains ---- */
   if (chainId && chainId !== 'tron') {
     const chain = getChain(chainId);
-    if (!chain || chain.kind !== 'evm') {
+    if (!chain || (chain.kind !== 'evm' && chain.kind !== 'solana')) {
       return res.status(400).json({ ok: false, error: 'unknown_chain' });
     }
-    const hash = String(txid || '');
-    if (!TX_HASH_RE.test(hash)) {
-      return res.status(400).json({ ok: false, error: 'bad_request' });
-    }
 
-    const expectedUnits =
-      BigInt(TIERS[tier].price + TIERS[tier].minTopup) * 10n ** BigInt(chain.decimals);
-    const out = await verifyErc20Transfer(chain, hash.toLowerCase(), expectedUnits);
+    const usd = TIERS[tier].price + TIERS[tier].minTopup;
+    const ref = String(txid || '');
+    let out;
+
+    if (chain.kind === 'solana') {
+      if (!SOL_SIG_RE.test(ref)) {
+        return res.status(400).json({ ok: false, error: 'bad_request' });
+      }
+      out = await verifySplTransfer(chain, ref, usd);
+    } else {
+      if (!TX_HASH_RE.test(ref)) {
+        return res.status(400).json({ ok: false, error: 'bad_request' });
+      }
+      out = await verifyErc20Transfer(chain, ref.toLowerCase(), BigInt(usd) * 10n ** BigInt(chain.decimals));
+    }
 
     if (out.status === 'chain_unavailable') {
       return res.status(502).json({ ok: false, error: 'chain_unavailable' });
@@ -102,7 +111,9 @@ export default async function handler(req, res) {
     }
 
     const stored = await recordOrder({
-      txid: hash.toLowerCase(), chain: chain.id, tier,
+      // Solana signatures are case-sensitive base58; EVM hashes are not
+      txid: chain.kind === 'solana' ? ref : ref.toLowerCase(),
+      chain: chain.id, tier,
       from: out.from, amount: out.amount, block: out.block,
       at: new Date().toISOString()
     });
