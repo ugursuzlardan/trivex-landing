@@ -246,17 +246,17 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
       return;
     }
 
-    // WalletConnect: QR / wallet-list modal — TRON support varies by wallet
-    if (name === 'WalletConnect') {
+    // WalletConnect: QR / wallet-list modal (Trust, Bitget, TokenPocket, imToken…)
+    if (name === 'WalletConnect' || name === 'Trust Wallet') {
       if (!window.TrivexWC) {
         reset(); showNote(t('act_note_wc_unavailable')); openManual();
         return;
       }
-      showNote(t('act_note_wc_tron')); // which wallets actually sign TRON via WC
+      showNote(name === 'Trust Wallet' ? t('act_note_trust') : t('act_note_wc_tron'));
       try {
         const addr = await window.TrivexWC.connect(PAYCFG.network);
         netOk = true; // WC session is opened on the configured chain
-        connectedWallet = 'WalletConnect';
+        connectedWallet = name;
         realConnection = true; wcMode = true; wcAddr = addr;
 
         let balance = null;
@@ -266,7 +266,7 @@ document.querySelectorAll('.connect-opt').forEach(btn => {
           walletUsdt = bal.usdt;
           balance = bal.usdt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
-        showConnected('WalletConnect', addr, balance);
+        showConnected(name, addr, balance);
 
         // same pre-flight checks as injected wallets
         const note = document.getElementById('connNote');
