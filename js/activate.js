@@ -294,7 +294,8 @@ function startPayment() {
 /* create the order, show the pay links and start watching the chain */
 let orderPromise = null;
 function ensureOrder() {
-  if (!PAYCFG || orderPromise) return orderPromise;
+  if (!PAYCFG) { renderStaticPreview(); return null; }
+  if (orderPromise) return orderPromise;
   const status = document.getElementById('payStatus');
   orderPromise = (async () => {
     try {
@@ -506,7 +507,8 @@ async function afterRemoteConnect(label, addr, signer) {
 
 function openManual() {
   const box = document.getElementById('manualBox');
-  if (box.hidden) document.getElementById('manualToggle').click();
+  if (box) box.hidden = false;
+  ensureOrder();
 }
 
 async function handleConnect(name, btn) {
@@ -951,33 +953,16 @@ function renderPayLinks(order) {
   }
 }
 
-document.getElementById('manualToggle').addEventListener('click', async () => {
-  const box = document.getElementById('manualBox');
-  const open = box.hidden;
-  box.hidden = !open;
-  document.getElementById('manualToggle').textContent = open ? t('act_manual_hide') : t('act_manual_toggle');
-  if (!open) return;
-
-  if (PAYCFG) { ensureOrder(); return; }
-
-  if (open && !qrDone) {
-    document.getElementById('payAddr').textContent = receivingAddr();
-    new QRCode(document.getElementById('qrBox'), {
-      text: receivingAddr(), width: 170, height: 170,
-      colorDark: '#07090f', colorLight: '#ffffff'
-    });
-    qrDone = true;
-    let left = 15 * 60;
-    clearInterval(timerId);
-    timerId = setInterval(() => {
-      left--;
-      if (left < 0) { clearInterval(timerId); return; }
-      const m = String(Math.floor(left / 60)).padStart(2, '0');
-      const s = String(left % 60).padStart(2, '0');
-      document.getElementById('payTimer').textContent = `${m}:${s}`;
-    }, 1000);
-  }
-});
+/* local preview has no backend: still show an address and QR to look at */
+function renderStaticPreview() {
+  if (qrDone) return;
+  document.getElementById('payAddr').textContent = receivingAddr();
+  new QRCode(document.getElementById('qrBox'), {
+    text: receivingAddr(), width: 170, height: 170,
+    colorDark: '#07090f', colorLight: '#ffffff'
+  });
+  qrDone = true;
+}
 
 document.getElementById('copyAddr').addEventListener('click', async e => {
   await navigator.clipboard.writeText(receivingAddr()).catch(() => {});

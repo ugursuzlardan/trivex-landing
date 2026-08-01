@@ -80,6 +80,8 @@
         </div>
         <div class="pay2__purpose" id="payPurpose"></div>
 
+        <div class="connect-divider" data-i18n="act_or_connect">або підключи гаманець</div>
+
         <!-- connect -->
         <div id="connectBox">
           <p class="pay2__hint" data-i18n="act_choose_wallet">Обери гаманець для підключення</p>
@@ -106,11 +108,8 @@
           <button class="btn btn--primary btn--full" id="payBtn">—</button>
         </div>
 
-        <!-- manual fallback toggle -->
-        <button class="pay2__manual-toggle" id="manualToggle" data-i18n="act_manual_toggle">Не можеш підключити гаманець? Надішли USDT вручну →</button>
-
-        <!-- manual fallback -->
-        <div id="manualBox" hidden>
+        <!-- primary flow: open the wallet with the transfer prepared -->
+        <div id="manualBox">
           <div class="pay pay--manual">
             <div class="pay__qr">
               <div class="pay__qrbox" id="qrBox"></div>

@@ -371,7 +371,20 @@ button { font-family: inherit; cursor: pointer; }
 .pay2 {
   max-width: 620px; margin: 0 auto; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius); padding: 30px;
+  display: flex; flex-direction: column;
 }
+/* paying by link always works, so it leads; connecting a wallet is the option */
+#manualBox { order: 5; }
+#connectBox, #connectedBox { order: 6; }
+.connect-divider {
+  order: 6; text-align: center; font-size: 12.5px; color: var(--muted);
+  margin: 22px 0 14px; position: relative;
+}
+.connect-divider::before, .connect-divider::after {
+  content: ''; position: absolute; top: 50%; width: 28%; height: 1px; background: var(--border);
+}
+.connect-divider::before { left: 0; }
+.connect-divider::after { right: 0; }
 .net-tabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .net-tab {
   flex: 1 1 140px; padding: 11px 12px; border-radius: 11px; font-size: 13.5px; font-weight: 600;
