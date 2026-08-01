@@ -19,6 +19,7 @@ fetch('/api/payment-config')
       if (banner) { banner.removeAttribute('data-i18n'); banner.textContent = t('act_testnet'); }
     }
     if (PAYCFG) {
+      window.PAYCFG_CHAINS = PAYCFG.chains || [];
       CHAIN = chains()[0] || null;
       renderChainTabs();
       renderWalletList();
@@ -124,8 +125,8 @@ function renderWalletList() {
   if (!box) return;
   box.innerHTML = '';
 
-  // no in-page signing for this chain → send the customer straight to the
-  // transfer-and-verify flow instead of showing wallets that cannot sign
+  // no in-page signing for this chain → the customer just sends and we detect
+  // the payment automatically
   if (!hasWalletFlow()) {
     document.getElementById('connectBox').hidden = true;
     showNote(t('act_note_transfer_only').replace('{chain}', CHAIN ? CHAIN.short : ''));
@@ -134,9 +135,33 @@ function renderWalletList() {
   }
   document.getElementById('connectBox').hidden = false;
 
+  // one button: AppKit's modal lists every wallet and deep-links on mobile
+  if (window.TrivexKit) {
+    const b = document.createElement('button');
+    b.className = 'connect-opt connect-opt--primary';
+    b.dataset.cwallet = 'AppKit';
+    b.innerHTML = `<span class="wallet__icon" style="--wc:#3B99FC">◈</span>${t('act_connect_wallet')}`;
+    b.addEventListener('click', () => connectViaKit(b));
+    box.appendChild(b);
+
+    const alt = document.createElement('button');
+    alt.className = 'connect-opt connect-opt--alt';
+    alt.textContent = t('act_other_ways');
+    alt.addEventListener('click', () => { box.dataset.expanded = '1'; renderLegacyWallets(box); });
+    box.appendChild(alt);
+    if (box.dataset.expanded) renderLegacyWallets(box);
+    return;
+  }
+
+  renderLegacyWallets(box);
+}
+
+/* direct per-wallet buttons, kept as a fallback if the SDK fails to load */
+function renderLegacyWallets(box) {
+  box.querySelectorAll('.connect-opt--legacy').forEach(el => el.remove());
   (isEvm() ? WALLETS_EVM : WALLETS_TRON).forEach(w => {
     const b = document.createElement('button');
-    b.className = 'connect-opt';
+    b.className = 'connect-opt connect-opt--legacy';
     b.dataset.cwallet = w.id;
     b.innerHTML =
       `<span class="wallet__icon" style="--wc:${w.color}${w.dark ? ';color:#000' : ''}${w.color === '#0f0f0f' ? ';border:1px solid #333' : ''}">${w.icon}</span>` +
@@ -144,6 +169,31 @@ function renderWalletList() {
     b.addEventListener('click', () => handleConnect(w.id, b));
     box.appendChild(b);
   });
+}
+
+/* connect through AppKit and wire it up as the active signer */
+async function connectViaKit(btn) {
+  const label = btn.childNodes[btn.childNodes.length - 1];
+  const orig = label.textContent;
+  btn.classList.add('is-connecting');
+  label.textContent = ' ' + t('act_connecting');
+  document.getElementById('connectNote').hidden = true;
+  try {
+    const addr = await window.TrivexKit.connect(CHAIN.id);
+    await afterRemoteConnect(t('act_wallet_connected_label'), addr, {
+      signMessage: msg => window.TrivexKit.signMessage(CHAIN.id, msg, addr),
+      sendTransfer: () => window.TrivexKit.pay(CHAIN.id, {
+        from: addr, to: CHAIN.address, amountUnits: amountUnits(), tier: tierKey
+      }),
+      walletLink: () => null   // AppKit handles the app switch itself
+    });
+  } catch (e) {
+    console.warn('appkit connect:', e && e.message);
+    showNote(t('act_note_rejected'));
+  } finally {
+    btn.classList.remove('is-connecting');
+    label.textContent = orig;
+  }
 }
 
 /* ---------- Stepper ---------- */
