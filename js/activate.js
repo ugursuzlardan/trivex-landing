@@ -163,25 +163,66 @@ function renderWalletList() {
   }
   document.getElementById('connectBox').hidden = false;
 
-  // one button: AppKit's modal lists every wallet and deep-links on mobile
-  if (window.TrivexKit) {
-    const b = document.createElement('button');
-    b.className = 'connect-opt connect-opt--primary';
-    b.dataset.cwallet = 'AppKit';
-    b.innerHTML = `<span class="wallet__icon" style="--wc:#3B99FC">◈</span>${t('act_connect_wallet')}`;
-    b.addEventListener('click', () => connectViaKit(b));
-    box.appendChild(b);
+  // TRON has purpose-built adapters that only ever ask for the TRON
+  // namespace, so they connect where a multi-chain proposal gets rejected
+  if (!isEvm() && window.TrivexTron) {
+    renderTronWallets(box);
+  } else {
+    renderLegacyWallets(box);
+  }
 
+  // AppKit's 550-wallet modal stays available as an extra route
+  if (window.TrivexKit) {
     const alt = document.createElement('button');
     alt.className = 'connect-opt connect-opt--alt';
     alt.textContent = t('act_other_ways');
-    alt.addEventListener('click', () => { box.dataset.expanded = '1'; renderLegacyWallets(box); });
+    alt.addEventListener('click', () => connectViaKit(alt));
     box.appendChild(alt);
-    if (box.dataset.expanded) renderLegacyWallets(box);
-    return;
   }
+}
 
-  renderLegacyWallets(box);
+/* TRON wallets through their own adapters */
+const TRON_WALLETS = [
+  // Trust is driven over WalletConnect: connect once, then approve the payment
+  { kind: 'walletconnect', label: 'Trust Wallet', icon: 'TW', color: '#3375BB', sub: 'WalletConnect' },
+  { kind: 'tronlink',      label: 'TronLink',     icon: 'TL', color: '#C23631' },
+  { kind: 'walletconnect', label: 'Bitget · TokenPocket · imToken', icon: 'WC', color: '#3B99FC', id: 'wc-other' }
+];
+
+function renderTronWallets(box) {
+  TRON_WALLETS.forEach((w, i) => {
+    const b = document.createElement('button');
+    b.className = 'connect-opt' + (i === 0 ? ' connect-opt--primary' : '');
+    b.dataset.cwallet = w.id || w.kind;
+    b.innerHTML = `<span class="wallet__icon" style="--wc:${w.color}">${w.icon}</span>` +
+      t('act_pay_with').replace('{wallet}', w.label) +
+      (w.sub ? ` <small class="connect-opt__sub">${w.sub}</small>` : '');
+    b.addEventListener('click', () => connectTron(w, b));
+    box.appendChild(b);
+  });
+}
+
+async function connectTron(w, btn) {
+  const label = btn.childNodes[btn.childNodes.length - 1];
+  const orig = label.textContent;
+  document.getElementById('connectNote').hidden = true;
+  btn.classList.add('is-connecting');
+  label.textContent = ' ' + t('act_connecting');
+  try {
+    const addr = await window.TrivexTron.connect(w.kind, PAYCFG.network);
+    await afterRemoteConnect(w.label, addr, {
+      signMessage: msg => window.TrivexTron.signMessage(w.kind, msg),
+      signTransaction: tx => window.TrivexTron.signTransaction(w.kind, tx),
+      // bring the wallet forward for the payment approval
+      walletLink: () => (w.label.includes('Trust') ? 'trust://' : null)
+    });
+  } catch (e) {
+    console.warn('tron connect:', e && e.message);
+    showNote(t('act_note_rejected'));
+  } finally {
+    btn.classList.remove('is-connecting');
+    label.textContent = orig;
+  }
 }
 
 /* direct per-wallet buttons, kept as a fallback if the SDK fails to load */
